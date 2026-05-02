@@ -1,0 +1,90 @@
+ebar sob kichu insforge backend diya sob kichu insforge backend a save koro connect koro sob data backend a save koro isnfoge fetch kore.
+
+
+Use the project URL and API key to connect directly via REST API or any HTTP client.
+
+Project URL
+https://676jp3yg.ap-southeast.insforge.app
+
+API Key
+ik_c71ec84390e892206d89df32e7b7116f
+
+
+Anon Key
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OC0xMjM0LTU2NzgtOTBhYi1jZGVmMTIzNDU2NzgiLCJlbWFpbCI6ImFub25AaW5zZm9yZ2UuY29tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3NTEzMzZ9.WuhBI-PYQhRAFH6QBgtRG0k1FLOPAIRmoXAuPdPiO2U
+
+
+
+
+Connection String
+
+connection string
+postgresql://postgres:18ab9d7b91bbecc038fa2f93d3f09e84@676jp3yg.ap-southeast.database.insforge.app:5432/insforge?sslmode=require
+
+
+parameters
+HOST: 676jp3yg.ap-southeast.database.insforge.app
+
+DATABASE: insforge
+
+USER: postgres
+
+PORT: 5432
+
+PASSWORD: 18ab9d7b91bbecc038fa2f93d3f09e84
+
+SSL: require
+
+
+
+
+MCP
+Terminal Command
+
+npx @insforge/install --client antigravity --env API_KEY=ik_c71ec84390e892206d89df32e7b7116f --env API_BASE_URL=https://676jp3yg.ap-southeast.insforge.app
+
+
+MCP Configuration
+
+{
+  "mcpServers": {
+    "insforge": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@insforge/mcp@latest"
+      ],
+      "env": {
+        "API_KEY": "ik_c71ec84390e892206d89df32e7b7116f",
+        "API_BASE_URL": "https://676jp3yg.ap-southeast.insforge.app"
+      }
+    }
+  }
+}
+Step 2 - Verify Connection
+
+Send the prompt below to your AI coding agent to verify the connection.
+
+prompt
+
+I'm using InsForge as my backend platform, call InsForge MCP's fetch-docs tool to learn about InsForge instructions.
+
+
+
+CLI
+Step 1 - Link Project
+
+Run the following command in your terminal
+
+Terminal Command
+
+npx @insforge/cli link --project-id 01c8291e-f542-4492-bc7d-7c4bcd2f7eb6
+
+Step 2 - Verify Connection
+
+Send the prompt below to your AI coding agent to verify the connection.
+
+prompt
+
+I'm using InsForge as my backend platform. Read the current directory, make sure InsForge skills are installed, and use InsForge CLI for backend tasks.
+
