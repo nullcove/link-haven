@@ -1,8 +1,5 @@
-import { useState } from "react";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { motion } from "framer-motion";
-import { useLoginAsGuest } from "@workspace/api-client-react";
-import { setAuthToken } from "@/lib/auth";
 import {
   Bookmark,
   FolderOpen,
@@ -83,23 +80,6 @@ const STATS = [
 ];
 
 export default function LandingPage() {
-  const [, setLocation] = useLocation();
-  const guestMutation = useLoginAsGuest();
-  const [loading, setLoading] = useState(false);
-
-  const handleTryNow = async () => {
-    setLoading(true);
-    try {
-      const res = await guestMutation.mutateAsync();
-      setAuthToken(res.token);
-      setLocation("/app");
-    } catch {
-      setLocation("/login");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-[#080810] text-white selection:bg-indigo-500/30 selection:text-indigo-200">
       {/* Nav */}
@@ -156,18 +136,15 @@ export default function LandingPage() {
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <button
-                onClick={handleTryNow}
-                disabled={loading}
-                data-testid="button-try-now"
-                className="group flex items-center gap-2 px-7 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-base transition-all shadow-[0_0_40px_rgba(99,102,241,0.3)] hover:shadow-[0_0_60px_rgba(99,102,241,0.4)] disabled:opacity-60"
-              >
-                {loading ? "Opening..." : "Try without login"}
-                <ArrowRight className="size-4 group-hover:translate-x-1 transition-transform" />
-              </button>
               <Link href="/signup">
+                <button className="group flex items-center gap-2 px-7 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-base transition-all shadow-[0_0_40px_rgba(99,102,241,0.3)] hover:shadow-[0_0_60px_rgba(99,102,241,0.4)]">
+                  Get started — free
+                  <ArrowRight className="size-4 group-hover:translate-x-1 transition-transform" />
+                </button>
+              </Link>
+              <Link href="/login">
                 <button className="flex items-center gap-2 px-7 py-3.5 rounded-xl border border-white/10 hover:border-white/20 text-white/70 hover:text-white font-medium text-base transition-all hover:bg-white/5">
-                  Create account
+                  Sign in
                 </button>
               </Link>
             </div>
@@ -182,7 +159,6 @@ export default function LandingPage() {
           >
             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent" />
             <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-[#0f0f1a] shadow-[0_40px_100px_rgba(0,0,0,0.8)]">
-              {/* Mock app header */}
               <div className="flex items-center gap-3 px-5 py-3 border-b border-white/5 bg-[#111120]">
                 <div className="flex gap-1.5">
                   <div className="size-3 rounded-full bg-[#ff5f57]" />
@@ -195,7 +171,6 @@ export default function LandingPage() {
                   </div>
                 </div>
               </div>
-              {/* Mock sidebar + content */}
               <div className="flex h-72 md:h-96">
                 <div className="w-48 border-r border-white/5 bg-[#0d0d18] p-3 flex flex-col gap-1 shrink-0 hidden sm:flex">
                   {["All Bookmarks", "Favourites", "Archive"].map((item, i) => (
@@ -242,7 +217,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Stats row */}
+      {/* Stats */}
       <section className="py-14 border-y border-white/5">
         <div className="max-w-4xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8">
           {STATS.map((s) => (
@@ -266,7 +241,6 @@ export default function LandingPage() {
               Inspired by Raindrop.io but built for people who want to own their own data.
             </p>
           </div>
-
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {FEATURES.map((f) => (
               <motion.div
@@ -330,7 +304,6 @@ export default function LandingPage() {
               Link Haven gives you all the features, forever, for free.
             </p>
           </div>
-
           <div className="grid md:grid-cols-2 gap-4">
             {[
               { icon: Zap, title: "No paid tier", desc: "Every feature is available from day one. No upsells, no feature gates." },
@@ -361,20 +334,18 @@ export default function LandingPage() {
                 Ready to save your web?
               </h2>
               <p className="text-white/40 mb-8 text-lg">
-                No credit card. No signup required to try. Just click and explore.
+                Free account. No credit card required. Start in seconds.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <button
-                  onClick={handleTryNow}
-                  disabled={loading}
-                  className="group flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition-all shadow-[0_0_40px_rgba(99,102,241,0.3)]"
-                >
-                  Try it now — no login
-                  <ArrowRight className="size-4 group-hover:translate-x-1 transition-transform" />
-                </button>
                 <Link href="/signup">
-                  <button className="flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl border border-white/10 text-white/60 hover:text-white hover:border-white/20 font-medium transition-all">
+                  <button className="group flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition-all shadow-[0_0_40px_rgba(99,102,241,0.3)]">
                     Create free account
+                    <ArrowRight className="size-4 group-hover:translate-x-1 transition-transform" />
+                  </button>
+                </Link>
+                <Link href="/login">
+                  <button className="flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl border border-white/10 text-white/60 hover:text-white hover:border-white/20 font-medium transition-all">
+                    Sign in
                   </button>
                 </Link>
               </div>

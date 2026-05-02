@@ -3,10 +3,8 @@ import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useLogin, useRegister, useLoginAsGuest } from "@workspace/api-client-react";
+import { useLogin, useRegister } from "@workspace/api-client-react";
 import { setAuthToken } from "@/lib/auth";
-
-const TEST_MODE = import.meta.env.VITE_TEST_MODE === "true";
 
 const loginSchema = z.object({
   email: z.string().email("Valid email required"),
@@ -44,7 +42,6 @@ export default function LoginPage() {
 
   const loginMutation = useLogin();
   const registerMutation = useRegister();
-  const guestMutation = useLoginAsGuest();
 
   const loginForm = useForm<LoginValues>({ resolver: zodResolver(loginSchema) });
   const signupForm = useForm<SignupValues>({ resolver: zodResolver(signupSchema) });
@@ -57,9 +54,7 @@ export default function LoginPage() {
     const line = BOOT_LINES[currentLine];
     if (currentChar < line.length) {
       const delay = line.includes("[ OK ]") ? 8 : 18;
-      const t = setTimeout(() => {
-        setCurrentChar((c) => c + 1);
-      }, delay);
+      const t = setTimeout(() => setCurrentChar((c) => c + 1), delay);
       return () => clearTimeout(t);
     } else {
       const t = setTimeout(() => {
@@ -82,7 +77,7 @@ export default function LoginPage() {
       setAuthToken(res.token);
       setLocation("/app");
     } catch {
-      setError("Invalid email or password. Try again.");
+      setError("Invalid email or password. Please try again.");
     }
   };
 
@@ -93,23 +88,11 @@ export default function LoginPage() {
       setAuthToken(res.token);
       setLocation("/app");
     } catch {
-      setError("This email is already registered.");
+      setError("This email is already registered. Try logging in.");
     }
   };
 
-  const handleGuest = async () => {
-    setError(null);
-    try {
-      const res = await guestMutation.mutateAsync();
-      setAuthToken(res.token);
-      setLocation("/app");
-    } catch {
-      setError("Could not start guest session. Please try again.");
-    }
-  };
-
-  const isPending =
-    loginMutation.isPending || registerMutation.isPending || guestMutation.isPending;
+  const isPending = loginMutation.isPending || registerMutation.isPending;
 
   const partialLine =
     currentLine < BOOT_LINES.length
@@ -118,43 +101,18 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[#0c0c10] flex items-center justify-center p-4 font-mono">
-      {/* Ambient glow */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-indigo-900/20 rounded-full blur-[120px]" />
       </div>
 
       <div className="relative w-full max-w-2xl">
-        {/* TEST MODE banner */}
-        {TEST_MODE && (
-          <div className="mb-3 flex items-center justify-between px-4 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30">
-            <div className="flex items-center gap-2">
-              <div className="size-2 rounded-full bg-amber-400 animate-pulse" />
-              <span className="text-amber-400 text-xs font-bold tracking-wider uppercase">
-                Test Mode Active
-              </span>
-              <span className="text-amber-400/60 text-xs">
-                — Skip login to explore the full app
-              </span>
-            </div>
-            <button
-              onClick={handleGuest}
-              disabled={isPending}
-              data-testid="button-test-mode"
-              className="px-4 py-1.5 rounded bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold tracking-wider uppercase transition-colors disabled:opacity-50"
-            >
-              {guestMutation.isPending ? "Loading..." : "Enter App Now"}
-            </button>
-          </div>
-        )}
-
-        {/* Terminal window */}
         <div className="rounded-xl overflow-hidden border border-white/10 shadow-2xl shadow-black/60 bg-[#111118]">
           {/* Window chrome */}
           <div className="flex items-center gap-3 px-4 py-3 bg-[#1a1a24] border-b border-white/5">
             <div className="flex items-center gap-1.5">
-              <div className="size-3 rounded-full bg-[#ff5f57] cursor-pointer hover:brightness-110 transition-all" />
-              <div className="size-3 rounded-full bg-[#febc2e] cursor-pointer hover:brightness-110 transition-all" />
-              <div className="size-3 rounded-full bg-[#28c840] cursor-pointer hover:brightness-110 transition-all" />
+              <div className="size-3 rounded-full bg-[#ff5f57]" />
+              <div className="size-3 rounded-full bg-[#febc2e]" />
+              <div className="size-3 rounded-full bg-[#28c840]" />
             </div>
             <div className="flex-1 text-center">
               <span className="text-[11px] text-white/30 tracking-wide select-none">
@@ -169,15 +127,12 @@ export default function LoginPage() {
             ref={terminalRef}
             className="p-5 min-h-[420px] max-h-[70vh] overflow-y-auto text-sm leading-relaxed"
           >
-            {/* Boot sequence */}
             <div className="mb-4 text-[#6ee7b7]/70">
               {displayedLines.map((line, i) => (
                 <div key={i} className={line === "" ? "h-3" : ""}>
                   {line.includes("[ OK ]") ? (
                     <span>
-                      <span className="text-[#6ee7b7]/50">
-                        {line.replace("[ OK ]", "")}
-                      </span>
+                      <span className="text-[#6ee7b7]/50">{line.replace("[ OK ]", "")}</span>
                       <span className="text-[#28c840] font-semibold">[ OK ]</span>
                     </span>
                   ) : (
@@ -193,7 +148,6 @@ export default function LoginPage() {
               )}
             </div>
 
-            {/* Form appears after boot */}
             {bootDone && (
               <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
                 <div className="flex items-center gap-2 text-indigo-400 mb-5">
@@ -232,12 +186,7 @@ export default function LoginPage() {
                       error={signupForm.formState.errors.password?.message}
                       {...signupForm.register("password")}
                     />
-                    <TerminalActions
-                      isSignup
-                      isPending={isPending}
-                      onGuest={handleGuest}
-                      error={error}
-                    />
+                    <TerminalSubmit isPending={isPending} isSignup error={error} />
                   </form>
                 ) : (
                   <form
@@ -259,12 +208,7 @@ export default function LoginPage() {
                       error={loginForm.formState.errors.password?.message}
                       {...loginForm.register("password")}
                     />
-                    <TerminalActions
-                      isSignup={false}
-                      isPending={isPending}
-                      onGuest={handleGuest}
-                      error={error}
-                    />
+                    <TerminalSubmit isPending={isPending} isSignup={false} error={error} />
                   </form>
                 )}
 
@@ -293,11 +237,6 @@ export default function LoginPage() {
             )}
           </div>
         </div>
-
-        {/* Demo hint */}
-        <div className="mt-3 text-center text-[11px] text-white/20 font-mono">
-          demo: demo@linkhaven.app / demo123
-        </div>
       </div>
     </div>
   );
@@ -322,15 +261,13 @@ function TerminalField({
   );
 }
 
-function TerminalActions({
+function TerminalSubmit({
   isSignup,
   isPending,
-  onGuest,
   error,
 }: {
   isSignup: boolean;
   isPending: boolean;
-  onGuest: () => void;
   error: string | null;
 }) {
   return (
@@ -341,25 +278,13 @@ function TerminalActions({
           {error}
         </div>
       )}
-      <div className="flex items-center gap-3 flex-wrap">
-        <button
-          type="submit"
-          disabled={isPending}
-          data-testid="button-submit-auth"
-          className="px-5 py-1.5 border border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/10 hover:border-indigo-500/70 text-xs font-bold tracking-widest uppercase transition-colors rounded disabled:opacity-40"
-        >
-          {isPending ? "[ ... ]" : isSignup ? "[ REGISTER ]" : "[ LOGIN ]"}
-        </button>
-        <button
-          type="button"
-          onClick={onGuest}
-          disabled={isPending}
-          data-testid="button-guest-login"
-          className="px-5 py-1.5 border border-white/10 text-white/30 hover:text-white/60 hover:border-white/20 text-xs font-bold tracking-widest uppercase transition-colors rounded disabled:opacity-40"
-        >
-          --guest-mode
-        </button>
-      </div>
+      <button
+        type="submit"
+        disabled={isPending}
+        className="px-5 py-1.5 border border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/10 hover:border-indigo-500/70 text-xs font-bold tracking-widest uppercase transition-colors rounded disabled:opacity-40"
+      >
+        {isPending ? "[ ... ]" : isSignup ? "[ REGISTER ]" : "[ LOGIN ]"}
+      </button>
     </div>
   );
 }
