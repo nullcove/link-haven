@@ -1,0 +1,20 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "m-r3SALntitotdxYG50-I"
+uri = "file://artifacts/link-haven/public/hero.png"
+type = "image"
+title = "Link Haven hero marketing screenshot"
+
+[[generated]]
+id = "_G_WxtwIVQyt0Z7RWNnWX"
+uri = "file://artifacts/link-haven/public/feature1.png"
+type = "image"
+title = "Abstract organized digital sanctuary"
+
+[[generated]]
+id = "WJImtIlUvlvM872b1UYSp"
+uri = "file://artifacts/link-haven/public/feature2.png"
+type = "image"
+title = "Glowing node network"

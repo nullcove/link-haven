@@ -3,13 +3,24 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Link Haven API - Raindrop.io clone bookmark manager
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: bookmarks
+    description: Bookmark operations
+  - name: collections
+    description: Collection operations
+  - name: tags
+    description: Tag operations
+  - name: stats
+    description: Statistics and dashboard operations
+
 paths:
   /healthz:
     get:
@@ -24,6 +35,460 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # AUTH
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterBody"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout user
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/guest:
+    post:
+      operationId: loginAsGuest
+      tags: [auth]
+      summary: Login as guest (no signup required)
+      responses:
+        "200":
+          description: Logged in as guest
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  # COLLECTIONS
+  /collections:
+    get:
+      operationId: listCollections
+      tags: [collections]
+      summary: List all collections for current user
+      responses:
+        "200":
+          description: List of collections
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Collection"
+
+    post:
+      operationId: createCollection
+      tags: [collections]
+      summary: Create a new collection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCollectionBody"
+      responses:
+        "201":
+          description: Created collection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Collection"
+
+  /collections/{id}:
+    get:
+      operationId: getCollection
+      tags: [collections]
+      summary: Get a collection by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Collection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Collection"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    patch:
+      operationId: updateCollection
+      tags: [collections]
+      summary: Update a collection
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCollectionBody"
+      responses:
+        "200":
+          description: Updated collection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Collection"
+
+    delete:
+      operationId: deleteCollection
+      tags: [collections]
+      summary: Delete a collection
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # BOOKMARKS
+  /bookmarks:
+    get:
+      operationId: listBookmarks
+      tags: [bookmarks]
+      summary: List bookmarks with optional filters
+      parameters:
+        - name: collectionId
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: tag
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: isFavorite
+          in: query
+          required: false
+          schema:
+            type: ["boolean", "null"]
+        - name: isArchived
+          in: query
+          required: false
+          schema:
+            type: ["boolean", "null"]
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+            enum: [link, article, image, video, document, null]
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+            enum: [newest, oldest, title, null]
+      responses:
+        "200":
+          description: List of bookmarks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Bookmark"
+
+    post:
+      operationId: createBookmark
+      tags: [bookmarks]
+      summary: Create a new bookmark
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBookmarkBody"
+      responses:
+        "201":
+          description: Created bookmark
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bookmark"
+
+  /bookmarks/{id}:
+    get:
+      operationId: getBookmark
+      tags: [bookmarks]
+      summary: Get a bookmark by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Bookmark
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bookmark"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    patch:
+      operationId: updateBookmark
+      tags: [bookmarks]
+      summary: Update a bookmark
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBookmarkBody"
+      responses:
+        "200":
+          description: Updated bookmark
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bookmark"
+
+    delete:
+      operationId: deleteBookmark
+      tags: [bookmarks]
+      summary: Delete a bookmark
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /bookmarks/{id}/favorite:
+    patch:
+      operationId: toggleFavorite
+      tags: [bookmarks]
+      summary: Toggle favorite status of a bookmark
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated bookmark
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bookmark"
+
+  /bookmarks/{id}/archive:
+    patch:
+      operationId: toggleArchive
+      tags: [bookmarks]
+      summary: Toggle archive status of a bookmark
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated bookmark
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bookmark"
+
+  # TAGS
+  /tags:
+    get:
+      operationId: listTags
+      tags: [tags]
+      summary: List all tags used by current user
+      responses:
+        "200":
+          description: List of tags with counts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TagCount"
+
+  /tags/{name}:
+    delete:
+      operationId: deleteTag
+      tags: [tags]
+      summary: Delete a tag from all bookmarks
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  # STATS
+  /stats:
+    get:
+      operationId: getStats
+      tags: [stats]
+      summary: Get dashboard statistics
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Stats"
+
+  /stats/recent:
+    get:
+      operationId: getRecentBookmarks
+      tags: [stats]
+      summary: Get recently added bookmarks
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Recent bookmarks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Bookmark"
+
+  /stats/by-type:
+    get:
+      operationId: getBookmarksByType
+      tags: [stats]
+      summary: Get bookmark counts grouped by type
+      responses:
+        "200":
+          description: Type breakdown
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TypeCount"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +499,309 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+        isGuest:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - email
+        - name
+        - isGuest
+        - createdAt
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+      required:
+        - user
+        - token
+
+    RegisterBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+        name:
+          type: string
+      required:
+        - email
+        - password
+        - name
+
+    LoginBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    Collection:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        color:
+          type: ["string", "null"]
+        icon:
+          type: ["string", "null"]
+        isPublic:
+          type: boolean
+        bookmarkCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - name
+        - description
+        - color
+        - icon
+        - isPublic
+        - bookmarkCount
+        - createdAt
+        - updatedAt
+
+    CreateCollectionBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        color:
+          type: ["string", "null"]
+        icon:
+          type: ["string", "null"]
+        isPublic:
+          type: boolean
+      required:
+        - name
+
+    UpdateCollectionBody:
+      type: object
+      properties:
+        name:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        color:
+          type: ["string", "null"]
+        icon:
+          type: ["string", "null"]
+        isPublic:
+          type: ["boolean", "null"]
+
+    Bookmark:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        collectionId:
+          type: ["integer", "null"]
+        collectionName:
+          type: ["string", "null"]
+        url:
+          type: string
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        coverImage:
+          type: ["string", "null"]
+        favicon:
+          type: ["string", "null"]
+        domain:
+          type: ["string", "null"]
+        type:
+          type: string
+          enum: [link, article, image, video, document]
+        tags:
+          type: array
+          items:
+            type: string
+        isFavorite:
+          type: boolean
+        isArchived:
+          type: boolean
+        note:
+          type: ["string", "null"]
+        highlight:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - collectionId
+        - collectionName
+        - url
+        - title
+        - description
+        - coverImage
+        - favicon
+        - domain
+        - type
+        - tags
+        - isFavorite
+        - isArchived
+        - note
+        - highlight
+        - createdAt
+        - updatedAt
+
+    CreateBookmarkBody:
+      type: object
+      properties:
+        url:
+          type: string
+        title:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        coverImage:
+          type: ["string", "null"]
+        collectionId:
+          type: ["integer", "null"]
+        tags:
+          type: array
+          items:
+            type: string
+        type:
+          type: string
+          enum: [link, article, image, video, document]
+        note:
+          type: ["string", "null"]
+      required:
+        - url
+
+    UpdateBookmarkBody:
+      type: object
+      properties:
+        title:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        coverImage:
+          type: ["string", "null"]
+        collectionId:
+          type: ["integer", "null"]
+        tags:
+          type: array
+          items:
+            type: string
+        type:
+          type: ["string", "null"]
+          enum: [link, article, image, video, document, null]
+        note:
+          type: ["string", "null"]
+        highlight:
+          type: ["string", "null"]
+        isFavorite:
+          type: ["boolean", "null"]
+        isArchived:
+          type: ["boolean", "null"]
+
+    TagCount:
+      type: object
+      properties:
+        name:
+          type: string
+        count:
+          type: integer
+      required:
+        - name
+        - count
+
+    TypeCount:
+      type: object
+      properties:
+        type:
+          type: string
+        count:
+          type: integer
+      required:
+        - type
+        - count
+
+    Stats:
+      type: object
+      properties:
+        totalBookmarks:
+          type: integer
+        totalCollections:
+          type: integer
+        totalFavorites:
+          type: integer
+        totalArchived:
+          type: integer
+        totalTags:
+          type: integer
+        bookmarksThisWeek:
+          type: integer
+        bookmarksThisMonth:
+          type: integer
+      required:
+        - totalBookmarks
+        - totalCollections
+        - totalFavorites
+        - totalArchived
+        - totalTags
+        - bookmarksThisWeek
+        - bookmarksThisMonth
