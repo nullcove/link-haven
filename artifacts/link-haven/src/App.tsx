@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/landing";
 import LoginPage from "@/pages/login";
+import VerifyEmailPage from "@/pages/verify-email";
 import AppPage from "@/pages/app/index";
 import CollectionPage from "@/pages/app/collection";
 import SettingsPage from "@/pages/settings";
@@ -26,6 +27,7 @@ function AppRouter() {
       <Route path="/" component={LandingPage} />
       <Route path="/login" component={LoginPage} />
       <Route path="/signup" component={LoginPage} />
+      <Route path="/verify-email" component={VerifyEmailPage} />
       <Route path="/app" component={AppPage} />
       <Route path="/app/collection/:id" component={CollectionPage} />
       <Route path="/settings" component={SettingsPage} />

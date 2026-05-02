@@ -74,21 +74,39 @@ export default function LoginPage() {
     setError(null);
     try {
       const res = await loginMutation.mutateAsync({ data });
-      setAuthToken(res.token);
+      setAuthToken((res as any).token);
       setLocation("/app");
-    } catch {
-      setError("Invalid email or password. Please try again.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.includes("not verified") || msg.includes("Email not verified")) {
+        setError("Please verify your email before signing in. Check your inbox or re-register.");
+      } else {
+        setError("Invalid email or password. Please try again.");
+      }
     }
   };
 
   const handleSignup = async (data: SignupValues) => {
     setError(null);
     try {
-      const res = await registerMutation.mutateAsync({ data });
-      setAuthToken(res.token);
-      setLocation("/app");
-    } catch {
-      setError("This email is already registered. Try logging in.");
+      const res = await registerMutation.mutateAsync({ data }) as any;
+      if (res.pendingVerification && res.verificationToken) {
+        setLocation(
+          `/verify-email?token=${encodeURIComponent(res.verificationToken)}&email=${encodeURIComponent(res.email)}`
+        );
+        return;
+      }
+      if (res.token) {
+        setAuthToken(res.token);
+        setLocation("/app");
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.includes("already registered") || msg.includes("409")) {
+        setError("This email is already registered. Try signing in.");
+      } else {
+        setError("Registration failed. Please try again.");
+      }
     }
   };
 
