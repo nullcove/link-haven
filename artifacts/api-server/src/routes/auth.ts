@@ -111,16 +111,28 @@ router.get("/auth/me", async (req, res): Promise<void> => {
 });
 
 router.post("/auth/guest", async (req, res): Promise<void> => {
-  const guestEmail = `guest_${Date.now()}@linkhaven.local`;
-  const guestName = "Guest User";
+  // Try to find the demo user first — guest sessions always log in as demo
+  // so visitors immediately see a fully-populated bookmark library.
+  const DEMO_EMAIL = "demo@linkhaven.app";
+  const [demoUser] = await db.select().from(usersTable).where(eq(usersTable.email, DEMO_EMAIL));
 
+  if (demoUser) {
+    const token = await createSession(demoUser.id);
+    res.json({
+      user: { id: demoUser.id, email: demoUser.email, name: demoUser.name, isGuest: true, createdAt: demoUser.createdAt },
+      token,
+    });
+    return;
+  }
+
+  // Fallback: create a fresh guest account if demo user doesn't exist
+  const guestEmail = `guest_${Date.now()}@linkhaven.local`;
   const [user] = await db
     .insert(usersTable)
-    .values({ email: guestEmail, name: guestName, isGuest: true })
+    .values({ email: guestEmail, name: "Guest User", isGuest: true })
     .returning();
 
   const token = await createSession(user.id);
-
   res.json({
     user: { id: user.id, email: user.email, name: user.name, isGuest: user.isGuest, createdAt: user.createdAt },
     token,
