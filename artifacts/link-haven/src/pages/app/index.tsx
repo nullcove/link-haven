@@ -1,26 +1,23 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/app-layout";
 import {
-  useListBookmarks,
-  getListBookmarksQueryKey,
-  useDeleteBookmark,
-  useToggleFavorite,
-  useToggleArchive,
+  useListBookmarks, getListBookmarksQueryKey,
+  useDeleteBookmark, useToggleFavorite, useToggleArchive,
 } from "@workspace/api-client-react";
 import { BookmarkCard } from "@/components/bookmark-card";
 import { BookmarkDetailDrawer } from "@/components/bookmark-detail-drawer";
 import { AddBookmarkDialog } from "@/components/add-bookmark-dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { LayoutGrid, List, Plus, Search, Bookmark } from "lucide-react";
+import {
+  LayoutGrid, List, Plus, Search, Bookmark,
+  SlidersHorizontal, X,
+} from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function AppPage() {
-  const searchParams = new URLSearchParams(
-    typeof window !== "undefined" ? window.location.search : ""
-  );
-  const view = searchParams.get("view");
-  const tag = searchParams.get("tag");
+  const sp = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+  const view = sp.get("view");
+  const tag = sp.get("tag");
 
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -43,15 +40,12 @@ export default function AppPage() {
     query: { queryKey: getListBookmarksQueryKey(queryParams) },
   });
 
-  const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: getListBookmarksQueryKey() });
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: getListBookmarksQueryKey() });
 
-  const getPageTitle = () => {
-    if (view === "favorites") return "Favourites";
-    if (view === "archive") return "Archive";
-    if (tag) return `#${tag}`;
-    return "All Bookmarks";
-  };
+  const pageTitle = view === "favorites" ? "Favourites"
+    : view === "archive" ? "Archive"
+    : tag ? `#${tag}`
+    : "All Bookmarks";
 
   const handleDelete = async (id: number) => {
     await deleteMutation.mutateAsync({ id });
@@ -59,103 +53,80 @@ export default function AppPage() {
     if (selectedBookmark?.id === id) setSelectedBookmark(null);
   };
 
-  const handleToggleFavorite = async (bookmark: any) => {
-    await favMutation.mutateAsync({ id: bookmark.id });
-    invalidate();
-  };
-
-  const handleToggleArchive = async (bookmark: any) => {
-    await archiveMutation.mutateAsync({ id: bookmark.id });
-    invalidate();
-  };
-
   return (
     <AppLayout>
-      {/* Top header */}
-      <header className="h-14 shrink-0 border-b border-white/5 flex items-center px-5 gap-3 bg-[#080810]/95 backdrop-blur sticky top-0 z-10">
-        <h1 className="font-semibold text-[15px] text-white/90 min-w-max">{getPageTitle()}</h1>
+      {/* ── Toolbar ─────────────────────────────────── */}
+      <div className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.06] bg-[#09090f]/90 backdrop-blur sticky top-0 z-10 shrink-0">
+        <h1 className="text-[14px] font-semibold text-white/80 min-w-max">{pageTitle}</h1>
+        {bookmarks && (
+          <span className="text-[11px] text-white/20 tabular-nums">{bookmarks.length}</span>
+        )}
 
-        <div className="flex-1 max-w-sm ml-auto relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-white/25" />
-          <Input
+        {/* Search */}
+        <div className="relative flex-1 max-w-sm ml-2">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-white/25 pointer-events-none" />
+          <input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search bookmarks..."
-            data-testid="input-search-bookmarks"
-            className="w-full pl-9 bg-white/[0.04] border-white/5 focus-visible:border-indigo-500/40 h-9 rounded-full text-sm placeholder:text-white/25"
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search…"
+            className="w-full pl-9 pr-8 py-1.5 bg-white/[0.05] border border-white/[0.08] rounded-lg text-[13px] text-white placeholder:text-white/25 outline-none focus:border-indigo-500/40 focus:bg-white/[0.07] transition-all"
           />
+          {search && (
+            <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60">
+              <X className="size-3.5" />
+            </button>
+          )}
         </div>
 
-        {/* View toggle */}
-        <div className="flex items-center border border-white/8 rounded-lg p-0.5 bg-white/[0.03]">
+        <div className="flex items-center gap-2 ml-auto">
+          {/* View toggle */}
+          <div className="flex items-center bg-white/[0.04] border border-white/[0.08] rounded-lg p-0.5">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`p-1.5 rounded-md transition-colors ${viewMode === "grid" ? "bg-white/10 text-white" : "text-white/30 hover:text-white/60"}`}
+            >
+              <LayoutGrid className="size-3.5" />
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`p-1.5 rounded-md transition-colors ${viewMode === "list" ? "bg-white/10 text-white" : "text-white/30 hover:text-white/60"}`}
+            >
+              <List className="size-3.5" />
+            </button>
+          </div>
+
+          {/* Add button */}
           <button
-            onClick={() => setViewMode("grid")}
-            data-testid="button-view-grid"
-            className={`p-1.5 rounded-md transition-colors ${viewMode === "grid" ? "bg-white/10 text-white" : "text-white/30 hover:text-white/60"}`}
+            onClick={() => setIsAddOpen(true)}
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[13px] font-semibold transition-colors shadow-[0_0_20px_rgba(99,102,241,0.2)]"
           >
-            <LayoutGrid className="size-3.5" />
-          </button>
-          <button
-            onClick={() => setViewMode("list")}
-            data-testid="button-view-list"
-            className={`p-1.5 rounded-md transition-colors ${viewMode === "list" ? "bg-white/10 text-white" : "text-white/30 hover:text-white/60"}`}
-          >
-            <List className="size-3.5" />
+            <Plus className="size-4" /> Add Link
           </button>
         </div>
+      </div>
 
-        <Button
-          onClick={() => setIsAddOpen(true)}
-          size="sm"
-          data-testid="button-add-bookmark"
-          className="h-9 gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white shadow-[0_0_20px_rgba(99,102,241,0.25)] border-0"
-        >
-          <Plus className="size-4" /> Add Link
-        </Button>
-      </header>
-
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto p-5 md:p-7">
+      {/* ── Content ─────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
-            <div className="size-7 rounded-full border-2 border-indigo-500/30 border-t-indigo-500 animate-spin" />
+            <div className="size-6 rounded-full border-2 border-indigo-500/30 border-t-indigo-500 animate-spin" />
           </div>
         ) : !bookmarks?.length ? (
-          <div className="flex flex-col items-center justify-center h-64 text-center">
-            <div className="size-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-4">
-              <Bookmark className="size-6 text-indigo-400/50" />
-            </div>
-            <h3 className="text-base font-semibold text-white/60 mb-1">Nothing here yet</h3>
-            <p className="text-sm text-white/30 mb-5 max-w-xs">
-              {search
-                ? "No bookmarks matched your search."
-                : "Add your first link to get started."}
-            </p>
-            {!search && (
-              <Button
-                onClick={() => setIsAddOpen(true)}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white border-0"
-              >
-                Add first link
-              </Button>
-            )}
-          </div>
+          <EmptyState search={search} view={view} tag={tag} onAdd={() => setIsAddOpen(true)} />
         ) : (
-          <div
-            className={
-              viewMode === "grid"
-                ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
-                : "flex flex-col gap-1.5 max-w-4xl"
-            }
-          >
+          <div className={
+            viewMode === "grid"
+              ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3.5 p-5"
+              : "flex flex-col gap-0.5 p-4 max-w-4xl"
+          }>
             {bookmarks.map((bookmark: any) => (
               <BookmarkCard
                 key={bookmark.id}
                 bookmark={bookmark}
                 viewMode={viewMode}
                 onClick={() => setSelectedBookmark(bookmark)}
-                onToggleFavorite={() => handleToggleFavorite(bookmark)}
-                onToggleArchive={() => handleToggleArchive(bookmark)}
+                onToggleFavorite={async () => { await favMutation.mutateAsync({ id: bookmark.id }); invalidate(); }}
+                onToggleArchive={async () => { await archiveMutation.mutateAsync({ id: bookmark.id }); invalidate(); }}
                 onDelete={() => handleDelete(bookmark.id)}
               />
             ))}
@@ -166,10 +137,39 @@ export default function AppPage() {
       <BookmarkDetailDrawer
         bookmark={selectedBookmark}
         open={!!selectedBookmark}
-        onOpenChange={(o) => !o && setSelectedBookmark(null)}
+        onOpenChange={o => !o && setSelectedBookmark(null)}
         onDelete={handleDelete}
       />
       <AddBookmarkDialog open={isAddOpen} onOpenChange={setIsAddOpen} />
     </AppLayout>
+  );
+}
+
+function EmptyState({ search, view, tag, onAdd }: {
+  search: string; view: string | null; tag: string | null; onAdd: () => void;
+}) {
+  const msg = search
+    ? `No bookmarks found for "${search}"`
+    : view === "favorites" ? "You haven't starred any bookmarks yet."
+    : view === "archive" ? "Your archive is empty."
+    : tag ? `No bookmarks tagged #${tag}.`
+    : "Your library is empty. Save your first link!";
+
+  return (
+    <div className="flex flex-col items-center justify-center h-64 text-center px-6">
+      <div className="size-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-4">
+        <Bookmark className="size-6 text-indigo-400/50" />
+      </div>
+      <p className="text-[14px] font-semibold text-white/50 mb-1">Nothing here</p>
+      <p className="text-[13px] text-white/25 mb-5 max-w-xs">{msg}</p>
+      {!search && !view && !tag && (
+        <button
+          onClick={onAdd}
+          className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-[13px] font-semibold transition-colors"
+        >
+          <Plus className="size-4" /> Add first link
+        </button>
+      )}
+    </div>
   );
 }
