@@ -5,6 +5,8 @@ import collectionsRouter from "./collections";
 import bookmarksRouter from "./bookmarks";
 import tagsRouter from "./tags";
 import statsRouter from "./stats";
+import settingsRouter from "./settings";
+import geminiRouter from "./gemini";
 
 const router: IRouter = Router();
 
@@ -14,5 +16,7 @@ router.use(collectionsRouter);
 router.use(bookmarksRouter);
 router.use(tagsRouter);
 router.use(statsRouter);
+router.use(settingsRouter);
+router.use(geminiRouter);
 
 export default router;

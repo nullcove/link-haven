@@ -18,8 +18,11 @@ export const bookmarksTable = pgTable("bookmarks", {
   tags: text("tags").array().notNull().default([]),
   isFavorite: boolean("is_favorite").notNull().default(false),
   isArchived: boolean("is_archived").notNull().default(false),
+  isPinned: boolean("is_pinned").notNull().default(false),
   note: text("note"),
   highlight: text("highlight"),
+  readingTime: integer("reading_time"),
+  summary: text("summary"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

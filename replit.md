@@ -17,45 +17,99 @@ A full-stack Raindrop.io clone bookmark manager called "Link Haven". Users can s
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
 
-## Features
+## Features (20+ beyond Raindrop.io)
 
-- **Landing page** — Rich marketing page with scroll animations, features, hero image
-- **Terminal auth** — macOS/kitty terminal-styled login and signup pages with typewriter animations
-- **Guest mode** — "Try without login" goes directly to the main app
-- **Bookmark manager** — Full Raindrop.io-like UI with sidebar, collections, tags, search, filters
-- **Collections** — Colored, icon-tagged folders for organizing bookmarks
-- **Tags** — Tag-based filtering and management
-- **Views** — All, Favorites, Archive, Unsorted, by collection/tag
-- **Stats dashboard** — Totals, type breakdown, recent activity
+**Core:**
+- Save, organize, and rediscover bookmarks by type (link, article, video, image, document, audio)
+- Collections with custom colors, icons, and bookmark counts
+- Tags with sidebar navigation and tag cloud
+- Full-text search and semantic AI search
+- Grid / List / Domain-grouping view modes
 
-## Demo Account
+**AI (Gemini):**
+- Full Gemini AI chat panel (⌘J) — full library context, action suggestions
+- Auto-tag generation, bookmark summarization, organize suggestions
+- Semantic search via AI Ask panel
+- Gemini API key stored server-side, never returned to frontend
 
-- Email: `demo@linkhaven.app`
-- Password: `demo123`
-- Pre-seeded with 18 bookmarks across 5 collections
+**Management:**
+- Pin bookmarks to top (Speed Dial, priority display)
+- Bulk select/archive/delete/tag/move actions
+- Import (Netscape HTML) and Export (JSON/HTML)
+- Duplicate detection and broken link checker
+- Note-taking per bookmark, highlight storage
 
-## Auth
+**Productivity:**
+- Command Palette (⌘K) for fast navigation and actions
+- Advanced Filters panel (type, date, domain, tags, notes, pinned)
+- Focus Mode / Reading List (clean reading UX, mark as read)
+- Reading time estimation per bookmark
+- Domain grouping view
 
-Session-based auth using tokens stored in localStorage as `link_haven_token`. Bearer token passed in Authorization header. Guest accounts auto-created on guest login.
+**Analytics:**
+- Analytics dashboard (daily/weekly activity charts, top domains, top tags, content types)
+- Usage stats in Settings (total, favorites, archived, this month)
+- Recent Activity panel
 
-## Key Commands
+**Settings:**
+- Gemini API key (hidden/masked input, test button, server-side only)
+- Keyboard shortcuts reference
+- Profile and preferences section
 
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
+## Routes
 
-## DB Schema
+- `/` — Landing page
+- `/login` — Login / Signup
+- `/app` — Main library (supports `?view=favorites|archive|pinned|recent|domains`, `?tag=...`)
+- `/app/collection/:id` — Collection view
+- `/settings` — Settings (Gemini key, profile, stats, shortcuts)
+- `/analytics` — Analytics dashboard
 
-Tables: `users`, `sessions`, `collections`, `bookmarks`
+## API Endpoints
 
-## API Routes
+- `GET/PUT /api/settings` — User settings (Gemini key stored masked)
+- `DELETE /api/settings/gemini-key` — Remove Gemini key
+- `POST /api/gemini/test` — Test Gemini connection
+- `POST /api/gemini/chat` — Chat with AI (full bookmark context)
+- `POST /api/gemini/summarize` — Summarize a bookmark
+- `POST /api/gemini/auto-tag` — Auto-generate tags
+- `POST /api/gemini/organize` — Get organization suggestions
 
-All under `/api`:
-- `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`, `POST /auth/guest`
-- `GET/POST /collections`, `GET/PATCH/DELETE /collections/:id`
-- `GET/POST /bookmarks`, `GET/PATCH/DELETE /bookmarks/:id`, `PATCH /bookmarks/:id/favorite`, `PATCH /bookmarks/:id/archive`
-- `GET /tags`, `DELETE /tags/:name`
-- `GET /stats`, `GET /stats/recent`, `GET /stats/by-type`
+## Keyboard Shortcuts
 
-See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
+- `⌘K` — Command palette
+- `⌘N` — Add new bookmark
+- `⌘J` — Toggle Gemini AI chat
+- `ESC` — Close dialogs
+
+## DB Schema Key Tables
+
+- `bookmarks` — id, userId, collectionId, url, title, type, tags[], isFavorite, isArchived, isPinned, note, highlight, readingTime, summary
+- `collections` — id, userId, name, color, icon
+- `user_settings` — id, userId, geminiApiKey, theme, defaultView, language
+- `sessions` — id, userId, token, expiresAt
+
+## Demo Credentials
+
+- Email: demo@linkhaven.app
+- Password: demo123
+- Test mode: VITE_TEST_MODE=true (skips login)
+
+## Key Files
+
+- `artifacts/link-haven/src/pages/app/index.tsx` — Main library page
+- `artifacts/link-haven/src/components/app-sidebar.tsx` — Sidebar with logo, nav, AI button
+- `artifacts/link-haven/src/components/layout/app-layout.tsx` — Layout with Gemini chat
+- `artifacts/link-haven/src/features/gemini-chat.tsx` — Full AI chat panel
+- `artifacts/link-haven/src/features/command-palette.tsx` — ⌘K palette
+- `artifacts/link-haven/src/features/advanced-filters.tsx` — Filter panel
+- `artifacts/link-haven/src/features/analytics-dashboard.tsx` — Charts/stats
+- `artifacts/link-haven/src/features/focus-mode.tsx` — Reading list mode
+- `artifacts/link-haven/src/features/speed-dial.tsx` — Pinned bookmarks quick access
+- `artifacts/link-haven/src/features/domain-grouping.tsx` — Group by domain view
+- `artifacts/link-haven/src/features/tag-cloud.tsx` — Visual tag cloud
+- `artifacts/link-haven/src/pages/analytics.tsx` — Analytics page
+- `artifacts/link-haven/src/pages/settings.tsx` — Settings with Gemini key UI
+- `artifacts/api-server/src/routes/settings.ts` — Settings API (key masking)
+- `artifacts/api-server/src/routes/gemini.ts` — Gemini proxy routes
+- `artifacts/link-haven/src/lib/api.ts` — Direct API call utility (auth token)

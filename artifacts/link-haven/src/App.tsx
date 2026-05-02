@@ -9,6 +9,7 @@ import LoginPage from "@/pages/login";
 import AppPage from "@/pages/app/index";
 import CollectionPage from "@/pages/app/collection";
 import SettingsPage from "@/pages/settings";
+import AnalyticsPage from "@/pages/analytics";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,7 @@ function AppRouter() {
       <Route path="/app" component={AppPage} />
       <Route path="/app/collection/:id" component={CollectionPage} />
       <Route path="/settings" component={SettingsPage} />
+      <Route path="/analytics" component={AnalyticsPage} />
       <Route component={NotFound} />
     </Switch>
   );

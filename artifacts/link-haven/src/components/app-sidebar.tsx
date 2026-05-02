@@ -13,18 +13,25 @@ import {
 } from "@workspace/api-client-react";
 import {
   Bookmark, Hash, LogOut, Settings, Star, Archive,
-  FolderPlus, ChevronDown, ChevronRight,
+  FolderPlus, ChevronDown, ChevronRight, BarChart3,
+  Brain, Pin, Clock, Globe, Sparkles,
 } from "lucide-react";
 import { clearAuthToken } from "@/lib/auth";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { Logo } from "./logo";
 
 const COL_COLORS = [
   "#6366f1","#8b5cf6","#ec4899","#10b981","#f59e0b",
   "#ef4444","#06b6d4","#84cc16","#f97316","#14b8a6",
 ];
 
-export function AppSidebar({ user }: { user: User }) {
+interface AppSidebarProps {
+  user: User;
+  onOpenGemini?: () => void;
+}
+
+export function AppSidebar({ user, onOpenGemini }: AppSidebarProps) {
   const [location, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [newColName, setNewColName] = useState("");
@@ -39,7 +46,7 @@ export function AppSidebar({ user }: { user: User }) {
   const createColMutation = useCreateCollection();
 
   const handleLogout = async () => {
-    try { await logoutMutation.mutateAsync(); } catch { }
+    try { await logoutMutation.mutateAsync(); } catch {}
     clearAuthToken();
     setLocation("/");
   };
@@ -53,26 +60,26 @@ export function AppSidebar({ user }: { user: User }) {
     setShowNewCol(false);
   };
 
+  const qs = typeof window !== "undefined" ? window.location.search : "";
   const isActive = (href: string) => {
-    if (href.includes("?")) return window.location.search === href.slice(href.indexOf("?"));
-    return location === href && !window.location.search;
+    if (href.includes("?")) return qs === href.slice(href.indexOf("?")) && location === "/app";
+    return location === href && !qs;
   };
 
   return (
     <Sidebar className="border-r border-white/[0.06] bg-[#09090f] w-[220px] shrink-0">
-      {/* Logo */}
       <SidebarHeader className="px-4 py-4 border-b border-white/[0.06]">
-        <Link href="/" className="flex items-center gap-2.5">
-          <div className="size-7 rounded-lg bg-indigo-600/25 border border-indigo-500/30 flex items-center justify-center">
-            <Bookmark className="size-3.5 text-indigo-400 fill-indigo-500/40" />
-          </div>
-          <span className="font-bold text-[15px] text-white tracking-tight">Link Haven</span>
+        <Link href="/" className="flex items-center gap-2.5 group">
+          <Logo size={28} />
+          <span className="font-bold text-[15px] text-white tracking-tight group-hover:text-indigo-200 transition-colors">
+            Link Haven
+          </span>
         </Link>
       </SidebarHeader>
 
       <SidebarContent className="px-2 py-3 gap-0 overflow-y-auto">
 
-        {/* Library nav */}
+        {/* Library */}
         <SidebarGroup className="mb-4">
           <p className="text-[10px] font-semibold text-white/20 uppercase tracking-[0.12em] px-2 mb-1.5">Library</p>
           <SidebarGroupContent>
@@ -80,18 +87,15 @@ export function AppSidebar({ user }: { user: User }) {
               {[
                 { href: "/app", label: "All Bookmarks", icon: Bookmark, count: stats?.totalBookmarks },
                 { href: "/app?view=favorites", label: "Favourites", icon: Star, count: stats?.totalFavorites },
+                { href: "/app?view=pinned", label: "Pinned", icon: Pin, count: null },
                 { href: "/app?view=archive", label: "Archive", icon: Archive, count: stats?.totalArchived },
               ].map(({ href, label, icon: Icon, count }) => (
                 <SidebarMenuItem key={href}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(href)}
-                    className="rounded-lg h-8 px-2 text-[13px]"
-                  >
+                  <SidebarMenuButton asChild isActive={isActive(href)} className="rounded-lg h-8 px-2 text-[13px]">
                     <Link href={href} className="flex items-center gap-2.5">
                       <Icon className="size-3.5 shrink-0" />
                       <span className="flex-1 truncate">{label}</span>
-                      {count != null && <span className="text-[11px] tabular-nums">{count}</span>}
+                      {count != null && <span className="text-[11px] tabular-nums opacity-40">{count}</span>}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -99,6 +103,45 @@ export function AppSidebar({ user }: { user: User }) {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Discover */}
+        <SidebarGroup className="mb-4">
+          <p className="text-[10px] font-semibold text-white/20 uppercase tracking-[0.12em] px-2 mb-1.5">Discover</p>
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-0.5">
+              {[
+                { href: "/analytics", label: "Analytics", icon: BarChart3 },
+                { href: "/app?view=recent", label: "Recent", icon: Clock },
+                { href: "/app?view=domains", label: "By Domain", icon: Globe },
+              ].map(({ href, label, icon: Icon }) => (
+                <SidebarMenuItem key={href}>
+                  <SidebarMenuButton asChild isActive={isActive(href)} className="rounded-lg h-8 px-2 text-[13px]">
+                    <Link href={href} className="flex items-center gap-2.5">
+                      <Icon className="size-3.5 shrink-0" />
+                      <span className="flex-1 truncate">{label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* AI Assistant */}
+        {onOpenGemini && (
+          <SidebarGroup className="mb-4">
+            <button
+              onClick={onOpenGemini}
+              className="w-full flex items-center gap-2.5 px-2 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600/[0.12] to-violet-600/[0.08] border border-indigo-500/20 hover:from-indigo-600/[0.22] hover:border-indigo-500/35 transition-all group"
+            >
+              <div className="size-6 rounded-md bg-gradient-to-br from-indigo-500/30 to-violet-500/20 border border-indigo-500/25 flex items-center justify-center shrink-0">
+                <Brain className="size-3.5 text-indigo-400" />
+              </div>
+              <span className="text-[12px] font-semibold text-indigo-300 group-hover:text-indigo-200 flex-1 text-left">AI Assistant</span>
+              <Sparkles className="size-3 text-indigo-400/50 group-hover:text-indigo-400 transition-colors" />
+            </button>
+          </SidebarGroup>
+        )}
 
         {/* Collections */}
         <SidebarGroup className="mb-4">
@@ -110,11 +153,7 @@ export function AppSidebar({ user }: { user: User }) {
               {colsOpen ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
               Collections
             </button>
-            <button
-              onClick={() => setShowNewCol(v => !v)}
-              title="New collection"
-              className="text-white/20 hover:text-white/50 transition-colors"
-            >
+            <button onClick={() => setShowNewCol(v => !v)} title="New collection" className="text-white/20 hover:text-white/50 transition-colors p-0.5">
               <FolderPlus className="size-3.5" />
             </button>
           </div>
@@ -122,12 +161,10 @@ export function AppSidebar({ user }: { user: User }) {
           {showNewCol && (
             <form onSubmit={handleCreateCol} className="px-2 mb-2">
               <input
-                autoFocus
-                value={newColName}
-                onChange={e => setNewColName(e.target.value)}
+                autoFocus value={newColName} onChange={e => setNewColName(e.target.value)}
                 onKeyDown={e => e.key === "Escape" && setShowNewCol(false)}
                 placeholder="Collection name…"
-                className="w-full text-[12px] bg-white/[0.06] border border-white/10 rounded-md px-2.5 py-1.5 text-white/80 placeholder:text-white/20 outline-none focus:border-indigo-500/40 transition-colors"
+                className="w-full text-[12px] bg-white/[0.06] border border-white/10 rounded-md px-2.5 py-1.5 text-white/80 placeholder:text-white/20 outline-none focus:border-indigo-500/40"
               />
             </form>
           )}
@@ -135,20 +172,17 @@ export function AppSidebar({ user }: { user: User }) {
           {colsOpen && (
             <SidebarGroupContent>
               <SidebarMenu className="gap-0.5">
-                {collections?.map((col: Collection, i: number) => (
+                {(collections as Collection[] | undefined)?.map((col: Collection, i: number) => (
                   <SidebarMenuItem key={col.id}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={location === `/app/collection/${col.id}`}
-                      className="rounded-lg h-8 px-2 text-[13px]"
-                    >
+                    <SidebarMenuButton asChild isActive={location === `/app/collection/${col.id}`} className="rounded-lg h-8 px-2 text-[13px]">
                       <Link href={`/app/collection/${col.id}`} className="flex items-center gap-2.5">
-                        <div
-                          className="size-2.5 rounded-full shrink-0"
-                          style={{ backgroundColor: col.color || COL_COLORS[i % COL_COLORS.length] }}
-                        />
+                        {col.icon ? (
+                          <span className="text-[13px] leading-none">{col.icon}</span>
+                        ) : (
+                          <div className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: col.color || COL_COLORS[i % COL_COLORS.length] }} />
+                        )}
                         <span className="flex-1 truncate">{col.name}</span>
-                        <span className="text-[11px] tabular-nums">{col.bookmarkCount}</span>
+                        <span className="text-[11px] tabular-nums opacity-40">{(col as any).bookmarkCount}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -159,26 +193,22 @@ export function AppSidebar({ user }: { user: User }) {
         </SidebarGroup>
 
         {/* Tags */}
-        {tags && tags.length > 0 && (
+        {tags && (tags as any[]).length > 0 && (
           <SidebarGroup>
-            <button
-              className="flex items-center gap-1 px-2 mb-2 text-[10px] font-semibold text-white/20 uppercase tracking-[0.12em] hover:text-white/40 transition-colors"
-              onClick={() => setTagsOpen(v => !v)}
-            >
+            <button className="flex items-center gap-1 px-2 mb-2 text-[10px] font-semibold text-white/20 uppercase tracking-[0.12em] hover:text-white/40 transition-colors" onClick={() => setTagsOpen(v => !v)}>
               {tagsOpen ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
               Tags
             </button>
             {tagsOpen && (
               <div className="px-2 flex flex-wrap gap-1 pb-2">
-                {tags.slice(0, 25).map((tag: any) => (
+                {(tags as any[]).slice(0, 25).map((tag: any) => (
                   <Link key={tag.name} href={`/app?tag=${tag.name}`}>
                     <span className={`inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[11px] border cursor-pointer transition-colors ${
-                      window.location.search === `?tag=${tag.name}`
+                      qs === `?tag=${tag.name}`
                         ? "bg-indigo-500/20 border-indigo-500/30 text-indigo-300"
                         : "bg-white/[0.04] border-white/[0.06] text-white/35 hover:text-white/60 hover:bg-white/[0.07]"
                     }`}>
-                      <Hash className="size-2.5" />
-                      {tag.name}
+                      <Hash className="size-2.5" />{tag.name}
                     </span>
                   </Link>
                 ))}
@@ -188,9 +218,7 @@ export function AppSidebar({ user }: { user: User }) {
         )}
       </SidebarContent>
 
-      {/* Footer */}
       <SidebarFooter className="border-t border-white/[0.06] p-3">
-        {/* User */}
         <div className="flex items-center gap-2.5 px-1 py-2 mb-1">
           <div className="size-7 rounded-full bg-indigo-600/20 border border-indigo-500/25 flex items-center justify-center text-[11px] font-bold text-indigo-300 uppercase shrink-0">
             {user.name.substring(0, 2)}
@@ -200,23 +228,17 @@ export function AppSidebar({ user }: { user: User }) {
             <p className="text-[11px] text-white/30 mt-0.5 truncate">{user.isGuest ? "Guest session" : user.email}</p>
           </div>
         </div>
-
         <SidebarMenu className="gap-0.5">
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={location === "/settings"} className="rounded-lg h-8 px-2 text-[13px]">
               <Link href="/settings" className="flex items-center gap-2.5">
-                <Settings className="size-3.5 shrink-0" />
-                <span>Settings</span>
+                <Settings className="size-3.5 shrink-0" /><span>Settings</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={handleLogout}
-              className="rounded-lg h-8 px-2 text-[13px] text-white/40 hover:text-red-400 hover:bg-red-500/[0.06]"
-            >
-              <LogOut className="size-3.5 shrink-0" />
-              <span>Sign out</span>
+            <SidebarMenuButton onClick={handleLogout} className="rounded-lg h-8 px-2 text-[13px] text-white/40 hover:text-red-400 hover:bg-red-500/[0.06]">
+              <LogOut className="size-3.5 shrink-0" /><span>Sign out</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
