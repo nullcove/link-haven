@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, bookmarksTable, collectionsTable, sessionsTable } from "@workspace/db";
-import { eq, and, ilike, or, sql } from "drizzle-orm";
+import { eq, and, ilike, or, sql, inArray } from "drizzle-orm";
 import {
   CreateBookmarkBody,
   UpdateBookmarkBody,
@@ -27,20 +27,14 @@ function getToken(req: any): string | null {
 }
 
 function extractDomain(url: string): string {
-  try {
-    return new URL(url).hostname.replace("www.", "");
-  } catch {
-    return "";
-  }
+  try { return new URL(url).hostname.replace("www.", ""); } catch { return ""; }
 }
 
 function getFavicon(url: string): string {
   try {
     const { protocol, hostname } = new URL(url);
     return `${protocol}//${hostname}/favicon.ico`;
-  } catch {
-    return "";
-  }
+  } catch { return ""; }
 }
 
 async function withCollectionName(bookmark: any): Promise<any> {
@@ -52,6 +46,7 @@ async function withCollectionName(bookmark: any): Promise<any> {
   return { ...bookmark, collectionName: col?.name ?? null };
 }
 
+/* ─── LIST ─────────────────────────────────────────────── */
 router.get("/bookmarks", async (req, res): Promise<void> => {
   const token = getToken(req);
   if (!token) { res.status(401).json({ error: "Not authenticated" }); return; }
@@ -64,7 +59,6 @@ router.get("/bookmarks", async (req, res): Promise<void> => {
   const { collectionId, tag, search, isFavorite, isArchived, type } = qp.data;
 
   const conditions = [eq(bookmarksTable.userId, userId)];
-
   if (collectionId != null) conditions.push(eq(bookmarksTable.collectionId, collectionId));
   if (isFavorite != null) conditions.push(eq(bookmarksTable.isFavorite, isFavorite));
   if (isArchived != null) {
@@ -78,7 +72,9 @@ router.get("/bookmarks", async (req, res): Promise<void> => {
       or(
         ilike(bookmarksTable.title, `%${search}%`),
         ilike(bookmarksTable.description, `%${search}%`),
-        ilike(bookmarksTable.url, `%${search}%`)
+        ilike(bookmarksTable.url, `%${search}%`),
+        ilike(bookmarksTable.note, `%${search}%`),
+        sql`${bookmarksTable.tags}::text ilike ${`%${search}%`}`
       )!
     );
   }
@@ -86,16 +82,168 @@ router.get("/bookmarks", async (req, res): Promise<void> => {
     conditions.push(sql`${bookmarksTable.tags} @> ARRAY[${tag}]::text[]`);
   }
 
+  const sortBy = (req.query.sortBy as string) || "date";
+  const sortOrder = (req.query.sortOrder as string) || "desc";
+
+  let orderClause: any;
+  if (sortBy === "title") {
+    orderClause = sortOrder === "asc"
+      ? sql`${bookmarksTable.title} ASC`
+      : sql`${bookmarksTable.title} DESC`;
+  } else if (sortBy === "domain") {
+    orderClause = sortOrder === "asc"
+      ? sql`${bookmarksTable.domain} ASC`
+      : sql`${bookmarksTable.domain} DESC`;
+  } else {
+    orderClause = sortOrder === "asc"
+      ? sql`${bookmarksTable.createdAt} ASC`
+      : sql`${bookmarksTable.createdAt} DESC`;
+  }
+
   const bookmarks = await db
     .select()
     .from(bookmarksTable)
     .where(and(...conditions))
-    .orderBy(sql`${bookmarksTable.createdAt} DESC`);
+    .orderBy(orderClause);
 
   const withNames = await Promise.all(bookmarks.map(withCollectionName));
   res.json(withNames);
 });
 
+/* ─── DUPLICATES ────────────────────────────────────────── */
+router.get("/bookmarks/duplicates", async (req, res): Promise<void> => {
+  const token = getToken(req);
+  if (!token) { res.status(401).json({ error: "Not authenticated" }); return; }
+  const userId = await getUserFromToken(token);
+  if (!userId) { res.status(401).json({ error: "Invalid session" }); return; }
+
+  const bookmarks = await db
+    .select()
+    .from(bookmarksTable)
+    .where(eq(bookmarksTable.userId, userId));
+
+  const groups: Record<string, typeof bookmarks> = {};
+  for (const b of bookmarks) {
+    const normalised = b.url.replace(/\/$/, "").toLowerCase();
+    if (!groups[normalised]) groups[normalised] = [];
+    groups[normalised].push(b);
+  }
+
+  const duplicateGroups = Object.values(groups).filter(g => g.length > 1);
+  res.json(duplicateGroups);
+});
+
+/* ─── BROKEN LINKS ──────────────────────────────────────── */
+router.post("/bookmarks/broken-check", async (req, res): Promise<void> => {
+  const token = getToken(req);
+  if (!token) { res.status(401).json({ error: "Not authenticated" }); return; }
+  const userId = await getUserFromToken(token);
+  if (!userId) { res.status(401).json({ error: "Invalid session" }); return; }
+
+  const { ids } = req.body as { ids: number[] };
+  if (!Array.isArray(ids) || ids.length === 0) { res.json([]); return; }
+
+  const bookmarks = await db
+    .select({ id: bookmarksTable.id, url: bookmarksTable.url, title: bookmarksTable.title })
+    .from(bookmarksTable)
+    .where(and(eq(bookmarksTable.userId, userId), inArray(bookmarksTable.id, ids)));
+
+  const results = await Promise.all(
+    bookmarks.map(async (b) => {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const r = await fetch(b.url, {
+          method: "HEAD",
+          signal: controller.signal,
+          redirect: "follow",
+        });
+        clearTimeout(timeoutId);
+        return { id: b.id, url: b.url, title: b.title, status: r.status, ok: r.ok };
+      } catch {
+        return { id: b.id, url: b.url, title: b.title, status: 0, ok: false };
+      }
+    })
+  );
+
+  res.json(results);
+});
+
+/* ─── IMPORT ────────────────────────────────────────────── */
+router.post("/bookmarks/import", async (req, res): Promise<void> => {
+  const token = getToken(req);
+  if (!token) { res.status(401).json({ error: "Not authenticated" }); return; }
+  const userId = await getUserFromToken(token);
+  if (!userId) { res.status(401).json({ error: "Invalid session" }); return; }
+
+  const { bookmarks: items } = req.body as {
+    bookmarks: Array<{ url: string; title?: string; tags?: string[]; description?: string; collectionId?: number }>;
+  };
+
+  if (!Array.isArray(items) || items.length === 0) {
+    res.status(400).json({ error: "No bookmarks provided" });
+    return;
+  }
+
+  const values = items.filter(b => b.url).map(b => ({
+    userId,
+    url: b.url,
+    title: b.title || extractDomain(b.url) || b.url,
+    description: b.description ?? null,
+    coverImage: null,
+    favicon: getFavicon(b.url),
+    domain: extractDomain(b.url),
+    type: "link" as const,
+    tags: b.tags ?? [],
+    collectionId: b.collectionId ?? null,
+    note: null,
+  }));
+
+  const inserted = await db.insert(bookmarksTable).values(values).returning({ id: bookmarksTable.id });
+  res.status(201).json({ imported: inserted.length });
+});
+
+/* ─── BULK DELETE ────────────────────────────────────────── */
+router.post("/bookmarks/bulk-delete", async (req, res): Promise<void> => {
+  const token = getToken(req);
+  if (!token) { res.status(401).json({ error: "Not authenticated" }); return; }
+  const userId = await getUserFromToken(token);
+  if (!userId) { res.status(401).json({ error: "Invalid session" }); return; }
+
+  const { ids } = req.body as { ids: number[] };
+  if (!Array.isArray(ids) || ids.length === 0) { res.json({ deleted: 0 }); return; }
+
+  await db
+    .delete(bookmarksTable)
+    .where(and(eq(bookmarksTable.userId, userId), inArray(bookmarksTable.id, ids)));
+
+  res.json({ deleted: ids.length });
+});
+
+/* ─── BULK UPDATE (move collection / add tag) ───────────── */
+router.post("/bookmarks/bulk-update", async (req, res): Promise<void> => {
+  const token = getToken(req);
+  if (!token) { res.status(401).json({ error: "Not authenticated" }); return; }
+  const userId = await getUserFromToken(token);
+  if (!userId) { res.status(401).json({ error: "Invalid session" }); return; }
+
+  const { ids, update } = req.body as { ids: number[]; update: { collectionId?: number | null; isFavorite?: boolean; isArchived?: boolean } };
+  if (!Array.isArray(ids) || ids.length === 0) { res.json({ updated: 0 }); return; }
+
+  const updateData: Record<string, any> = {};
+  if (update.collectionId !== undefined) updateData.collectionId = update.collectionId;
+  if (update.isFavorite !== undefined) updateData.isFavorite = update.isFavorite;
+  if (update.isArchived !== undefined) updateData.isArchived = update.isArchived;
+
+  await db
+    .update(bookmarksTable)
+    .set(updateData)
+    .where(and(eq(bookmarksTable.userId, userId), inArray(bookmarksTable.id, ids)));
+
+  res.json({ updated: ids.length });
+});
+
+/* ─── CREATE ────────────────────────────────────────────── */
 router.post("/bookmarks", async (req, res): Promise<void> => {
   const token = getToken(req);
   if (!token) { res.status(401).json({ error: "Not authenticated" }); return; }
@@ -106,7 +254,6 @@ router.post("/bookmarks", async (req, res): Promise<void> => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
   const { url, title, description, coverImage, collectionId, tags, type, note } = parsed.data;
-
   const domain = extractDomain(url);
   const favicon = getFavicon(url);
   const finalTitle = title || domain || url;
@@ -114,25 +261,14 @@ router.post("/bookmarks", async (req, res): Promise<void> => {
 
   const [bookmark] = await db
     .insert(bookmarksTable)
-    .values({
-      userId,
-      url,
-      title: finalTitle,
-      description: description ?? null,
-      coverImage: coverImage ?? null,
-      favicon,
-      domain,
-      type: finalType,
-      tags: tags ?? [],
-      collectionId: collectionId ?? null,
-      note: note ?? null,
-    })
+    .values({ userId, url, title: finalTitle, description: description ?? null, coverImage: coverImage ?? null, favicon, domain, type: finalType, tags: tags ?? [], collectionId: collectionId ?? null, note: note ?? null })
     .returning();
 
   const result = await withCollectionName(bookmark);
   res.status(201).json(result);
 });
 
+/* ─── GET ONE ───────────────────────────────────────────── */
 router.get("/bookmarks/:id", async (req, res): Promise<void> => {
   const token = getToken(req);
   if (!token) { res.status(401).json({ error: "Not authenticated" }); return; }
@@ -148,11 +284,10 @@ router.get("/bookmarks/:id", async (req, res): Promise<void> => {
     .where(and(eq(bookmarksTable.id, params.data.id), eq(bookmarksTable.userId, userId)));
 
   if (!bookmark) { res.status(404).json({ error: "Bookmark not found" }); return; }
-
-  const result = await withCollectionName(bookmark);
-  res.json(result);
+  res.json(await withCollectionName(bookmark));
 });
 
+/* ─── UPDATE ────────────────────────────────────────────── */
 router.patch("/bookmarks/:id", async (req, res): Promise<void> => {
   const token = getToken(req);
   if (!token) { res.status(401).json({ error: "Not authenticated" }); return; }
@@ -185,11 +320,10 @@ router.patch("/bookmarks/:id", async (req, res): Promise<void> => {
     .returning();
 
   if (!bookmark) { res.status(404).json({ error: "Bookmark not found" }); return; }
-
-  const result = await withCollectionName(bookmark);
-  res.json(result);
+  res.json(await withCollectionName(bookmark));
 });
 
+/* ─── DELETE ────────────────────────────────────────────── */
 router.delete("/bookmarks/:id", async (req, res): Promise<void> => {
   const token = getToken(req);
   if (!token) { res.status(401).json({ error: "Not authenticated" }); return; }
@@ -206,6 +340,7 @@ router.delete("/bookmarks/:id", async (req, res): Promise<void> => {
   res.sendStatus(204);
 });
 
+/* ─── TOGGLE FAVORITE ────────────────────────────────────── */
 router.patch("/bookmarks/:id/favorite", async (req, res): Promise<void> => {
   const token = getToken(req);
   if (!token) { res.status(401).json({ error: "Not authenticated" }); return; }
@@ -228,10 +363,10 @@ router.patch("/bookmarks/:id/favorite", async (req, res): Promise<void> => {
     .where(eq(bookmarksTable.id, params.data.id))
     .returning();
 
-  const result = await withCollectionName(bookmark);
-  res.json(result);
+  res.json(await withCollectionName(bookmark));
 });
 
+/* ─── TOGGLE ARCHIVE ─────────────────────────────────────── */
 router.patch("/bookmarks/:id/archive", async (req, res): Promise<void> => {
   const token = getToken(req);
   if (!token) { res.status(401).json({ error: "Not authenticated" }); return; }
@@ -254,8 +389,7 @@ router.patch("/bookmarks/:id/archive", async (req, res): Promise<void> => {
     .where(eq(bookmarksTable.id, params.data.id))
     .returning();
 
-  const result = await withCollectionName(bookmark);
-  res.json(result);
+  res.json(await withCollectionName(bookmark));
 });
 
 export default router;

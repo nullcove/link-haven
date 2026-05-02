@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { AppLayout } from "@/components/layout/app-layout";
 import {
   useListBookmarks, getListBookmarksQueryKey,
@@ -9,14 +9,32 @@ import {
 import { BookmarkCard } from "@/components/bookmark-card";
 import { BookmarkDetailDrawer } from "@/components/bookmark-detail-drawer";
 import { AddBookmarkDialog } from "@/components/add-bookmark-dialog";
-import { LayoutGrid, List, Plus, Search, FolderOpen, X } from "lucide-react";
+import { BulkActionBar } from "@/features/bulk-action-bar";
+import {
+  LayoutGrid, List, Plus, Search, FolderOpen, X,
+  SlidersHorizontal, ChevronDown, CheckSquare, Square,
+} from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRoute } from "wouter";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+type SortBy = "date" | "title" | "domain";
+type SortOrder = "asc" | "desc";
 
 const COL_COLORS = [
   "#6366f1","#8b5cf6","#ec4899","#10b981","#f59e0b",
   "#ef4444","#06b6d4","#84cc16","#f97316","#14b8a6",
 ];
+
+const SORT_LABELS: Record<string, string> = {
+  "date-desc": "Newest first",
+  "date-asc": "Oldest first",
+  "title-asc": "Title A→Z",
+  "title-desc": "Title Z→A",
+  "domain-asc": "Domain A→Z",
+};
 
 export default function CollectionPage() {
   const [, params] = useRoute("/app/collection/:id");
@@ -24,8 +42,12 @@ export default function CollectionPage() {
 
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [sortBy, setSortBy] = useState<SortBy>("date");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [selectedBookmark, setSelectedBookmark] = useState<any>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   const queryClient = useQueryClient();
   const deleteMutation = useDeleteBookmark();
@@ -36,21 +58,40 @@ export default function CollectionPage() {
     query: { enabled: !!collectionId, queryKey: getGetCollectionQueryKey(collectionId || 0) },
   });
 
-  const queryParams = { search: search || undefined, collectionId: collectionId ?? undefined };
-  const { data: bookmarks, isLoading } = useListBookmarks(queryParams, {
+  const queryParams = {
+    search: search || undefined,
+    collectionId: collectionId ?? undefined,
+    sortBy,
+    sortOrder,
+  } as any;
+
+  const { data: bookmarks = [], isLoading } = useListBookmarks(queryParams, {
     query: { enabled: !!collectionId, queryKey: getListBookmarksQueryKey(queryParams) },
   });
 
-  const invalidate = () => {
+  const invalidate = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: getListBookmarksQueryKey() });
     queryClient.invalidateQueries({ queryKey: getGetCollectionQueryKey(collectionId || 0) });
     queryClient.invalidateQueries({ queryKey: getListCollectionsQueryKey() });
-  };
+  }, [queryClient, collectionId]);
 
   const handleDelete = async (id: number) => {
     await deleteMutation.mutateAsync({ id });
     invalidate();
     if (selectedBookmark?.id === id) setSelectedBookmark(null);
+  };
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === bookmarks.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(bookmarks.map((b: any) => b.id)));
   };
 
   if (!collectionId) return null;
@@ -60,29 +101,56 @@ export default function CollectionPage() {
   return (
     <AppLayout>
       {/* Toolbar */}
-      <div className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.06] bg-[#09090f]/90 backdrop-blur sticky top-0 z-10 shrink-0">
-        <div className="flex items-center gap-2 min-w-max">
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/[0.06] bg-[#09090f]/95 backdrop-blur sticky top-0 z-10 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <div className="size-3.5 rounded-full shrink-0" style={{ backgroundColor: colColor }} />
-          <h1 className="text-[14px] font-semibold text-white/80">{collection?.name || "Collection"}</h1>
-          {bookmarks && <span className="text-[11px] text-white/20 tabular-nums">{bookmarks.length}</span>}
+          <h1 className="text-[13px] font-semibold text-white/75">{collection?.name || "Collection"}</h1>
+          {!isLoading && <span className="text-[11px] text-white/20 tabular-nums">{bookmarks.length}</span>}
         </div>
 
-        <div className="relative flex-1 max-w-sm ml-2">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-white/25 pointer-events-none" />
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-white/25 pointer-events-none" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search in collection…"
-            className="w-full pl-9 pr-8 py-1.5 bg-white/[0.05] border border-white/[0.08] rounded-lg text-[13px] text-white placeholder:text-white/25 outline-none focus:border-indigo-500/40 transition-all"
+            className="w-full pl-8 pr-7 py-1.5 bg-white/[0.05] border border-white/[0.08] rounded-lg text-[12px] text-white placeholder:text-white/25 outline-none focus:border-indigo-500/40 transition-all"
           />
           {search && (
-            <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60">
-              <X className="size-3.5" />
+            <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60">
+              <X className="size-3" />
             </button>
           )}
         </div>
 
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="flex items-center gap-1.5 ml-auto shrink-0">
+          {/* Sort */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[11px] text-white/50 hover:text-white/80 transition-colors">
+                <SlidersHorizontal className="size-3.5" />
+                <span className="hidden sm:inline">{SORT_LABELS[`${sortBy}-${sortOrder}`] || "Sort"}</span>
+                <ChevronDown className="size-3 opacity-50" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44 bg-[#131320] border border-white/10 rounded-xl p-1 shadow-2xl">
+              {Object.entries(SORT_LABELS).map(([key, label]) => {
+                const [sb, so] = key.split("-");
+                const active = sortBy === sb && sortOrder === so;
+                return (
+                  <DropdownMenuItem
+                    key={key}
+                    onClick={() => { setSortBy(sb as SortBy); setSortOrder(so as SortOrder); }}
+                    className={`text-[12px] rounded-lg cursor-pointer ${active ? "text-indigo-300 bg-indigo-500/10" : "text-white/60 hover:text-white"}`}
+                  >
+                    {active && <span className="mr-1">✓</span>}{label}
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* View toggle */}
           <div className="flex items-center bg-white/[0.04] border border-white/[0.08] rounded-lg p-0.5">
             <button onClick={() => setViewMode("grid")} className={`p-1.5 rounded-md transition-colors ${viewMode === "grid" ? "bg-white/10 text-white" : "text-white/30 hover:text-white/60"}`}>
               <LayoutGrid className="size-3.5" />
@@ -91,14 +159,38 @@ export default function CollectionPage() {
               <List className="size-3.5" />
             </button>
           </div>
+
+          {/* Select */}
+          <button
+            onClick={() => { setSelectMode(v => !v); setSelectedIds(new Set()); }}
+            className={`p-1.5 rounded-lg border transition-colors ${selectMode ? "bg-indigo-600/20 border-indigo-500/30 text-indigo-400" : "bg-white/[0.04] border-white/[0.08] text-white/30 hover:text-white/70"}`}
+          >
+            <CheckSquare className="size-3.5" />
+          </button>
+
+          {/* Add */}
           <button
             onClick={() => setIsAddOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[13px] font-semibold transition-colors shadow-[0_0_20px_rgba(99,102,241,0.2)]"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[12px] font-semibold transition-colors"
           >
-            <Plus className="size-4" /> Add Link
+            <Plus className="size-3.5" /> Add Link
           </button>
         </div>
       </div>
+
+      {/* Select bar */}
+      {selectMode && (
+        <div className="flex items-center gap-3 px-4 py-2 bg-indigo-600/10 border-b border-indigo-500/20 shrink-0">
+          <button onClick={toggleSelectAll} className="flex items-center gap-1.5 text-[12px] text-indigo-300 hover:text-indigo-200 transition-colors">
+            {selectedIds.size === bookmarks.length ? <CheckSquare className="size-3.5" /> : <Square className="size-3.5" />}
+            {selectedIds.size === bookmarks.length ? "Deselect all" : "Select all"}
+          </button>
+          <span className="text-[12px] text-indigo-400/60">{selectedIds.size} of {bookmarks.length} selected</span>
+          <button onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }} className="ml-auto text-[12px] text-indigo-300/60 hover:text-indigo-300">
+            <X className="size-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
@@ -106,7 +198,7 @@ export default function CollectionPage() {
           <div className="flex items-center justify-center h-64">
             <div className="size-6 rounded-full border-2 border-indigo-500/30 border-t-indigo-500 animate-spin" />
           </div>
-        ) : !bookmarks?.length ? (
+        ) : !bookmarks.length ? (
           <div className="flex flex-col items-center justify-center h-64 text-center">
             <div className="size-14 rounded-2xl bg-white/[0.04] border border-white/[0.07] flex items-center justify-center mb-4">
               <FolderOpen className="size-6 text-white/20" />
@@ -130,15 +222,26 @@ export default function CollectionPage() {
               : "flex flex-col gap-0.5 p-4 max-w-4xl"
           }>
             {bookmarks.map((bookmark: any) => (
-              <BookmarkCard
-                key={bookmark.id}
-                bookmark={bookmark}
-                viewMode={viewMode}
-                onClick={() => setSelectedBookmark(bookmark)}
-                onToggleFavorite={async () => { await favMutation.mutateAsync({ id: bookmark.id }); invalidate(); }}
-                onToggleArchive={async () => { await archiveMutation.mutateAsync({ id: bookmark.id }); invalidate(); }}
-                onDelete={() => handleDelete(bookmark.id)}
-              />
+              <div key={bookmark.id} className="relative">
+                {selectMode && (
+                  <div
+                    className={`absolute top-2 left-2 z-10 size-5 rounded-md border-2 flex items-center justify-center cursor-pointer transition-all ${
+                      selectedIds.has(bookmark.id) ? "bg-indigo-600 border-indigo-500" : "bg-black/60 border-white/30 hover:border-indigo-400"
+                    }`}
+                    onClick={e => { e.stopPropagation(); toggleSelect(bookmark.id); }}
+                  >
+                    {selectedIds.has(bookmark.id) && <span className="text-white text-[10px] font-bold">✓</span>}
+                  </div>
+                )}
+                <BookmarkCard
+                  bookmark={bookmark}
+                  viewMode={viewMode}
+                  onClick={() => { if (selectMode) { toggleSelect(bookmark.id); return; } setSelectedBookmark(bookmark); }}
+                  onToggleFavorite={async () => { await favMutation.mutateAsync({ id: bookmark.id }); invalidate(); }}
+                  onToggleArchive={async () => { await archiveMutation.mutateAsync({ id: bookmark.id }); invalidate(); }}
+                  onDelete={() => handleDelete(bookmark.id)}
+                />
+              </div>
             ))}
           </div>
         )}
@@ -151,6 +254,14 @@ export default function CollectionPage() {
         onDelete={handleDelete}
       />
       <AddBookmarkDialog open={isAddOpen} onOpenChange={setIsAddOpen} />
+
+      {selectMode && selectedIds.size > 0 && (
+        <BulkActionBar
+          selectedIds={Array.from(selectedIds)}
+          onClear={() => setSelectedIds(new Set())}
+          onDone={() => { setSelectedIds(new Set()); setSelectMode(false); invalidate(); }}
+        />
+      )}
     </AppLayout>
   );
 }
