@@ -22,6 +22,26 @@ export function AppLayout({ children }: { children: ReactNode }) {
     query: { queryKey: getListBookmarksQueryKey() },
   });
 
+  /* ── Apply background image directly on body ──────────────────
+     body has `bg-background` from Tailwind (index.css line ~208).
+     Inline style on element.style always wins over CSS classes,
+     so setting document.body.style.background overrides that class.
+  ─────────────────────────────────────────────────────────────── */
+  useEffect(() => {
+    if (bgPath) {
+      document.body.style.background =
+        `linear-gradient(rgba(4,4,11,.52),rgba(4,4,11,.52)), url(${bgPath}) center/cover no-repeat`;
+      document.body.style.backgroundAttachment = "fixed";
+    } else {
+      document.body.style.background = "";
+      document.body.style.backgroundAttachment = "";
+    }
+    return () => {
+      document.body.style.background = "";
+      document.body.style.backgroundAttachment = "";
+    };
+  }, [bgPath]);
+
   useEffect(() => {
     if (!token) setLocation("/login");
   }, [token, setLocation]);
@@ -42,7 +62,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center" style={{ background: "#080810" }}>
+      <div className="flex h-screen w-full items-center justify-center bg-[#080810]">
         <div className="flex flex-col items-center gap-5">
           <div className="relative size-12">
             <div className="absolute inset-0 rounded-full border-2 border-indigo-500/20" />
@@ -58,32 +78,21 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <SidebarProvider defaultOpen={true}>
-      {/* Root — background image fills the whole screen */}
-      <div
-        className="flex min-h-screen w-full text-foreground relative"
-        style={{
-          background: bgPath
-            ? `url(${bgPath}) center/cover fixed`
-            : "#080810",
-        }}
-      >
-        {/* Dark overlay so text stays readable, but image is visible */}
-        {bgPath && (
-          <div
-            className="fixed inset-0 pointer-events-none"
-            style={{ background: "rgba(5,5,12,.58)", zIndex: 0 }}
-          />
-        )}
-
-        {/* Sidebar and content sit above the overlay */}
-        <div className="relative flex w-full min-h-screen" style={{ zIndex: 1 }}>
-          <AppSidebar user={user} onOpenGemini={() => setGeminiOpen(v => !v)} bgActive={!!bgPath} />
-          <SidebarInset className="flex-1 overflow-hidden">
-            <main className="flex flex-col h-[100dvh] overflow-hidden">
-              {children}
-            </main>
-          </SidebarInset>
-        </div>
+      {/*
+        All containers must be transparent so the body background shows through.
+        SidebarInset has `bg-background` Tailwind class — override with inline style.
+        Sidebar gets glass effect when bgActive.
+      */}
+      <div className="flex min-h-screen w-full text-foreground" style={{ background: "transparent" }}>
+        <AppSidebar user={user} onOpenGemini={() => setGeminiOpen(v => !v)} bgActive={!!bgPath} />
+        <SidebarInset
+          className="flex-1 overflow-hidden"
+          style={{ background: "transparent" }}
+        >
+          <main className="flex flex-col h-[100dvh] overflow-hidden" style={{ background: "transparent" }}>
+            {children}
+          </main>
+        </SidebarInset>
       </div>
       {geminiOpen && (
         <GeminiChat onClose={() => setGeminiOpen(false)} bookmarks={allBookmarks as any} />
