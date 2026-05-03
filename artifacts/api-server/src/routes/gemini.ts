@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, sessionsTable, userSettingsTable, bookmarksTable, collectionsTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -41,6 +41,158 @@ async function callGemini(apiKey: string, contents: any[], systemInstruction?: s
   return data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 }
 
+function extractDomainLocal(url: string): string {
+  try { return new URL(url).hostname.replace("www.", ""); } catch { return ""; }
+}
+
+async function executeAction(userId: number, action: any): Promise<{ success: boolean; message: string; data?: any }> {
+  try {
+    switch (action.action) {
+      case "add_bookmark": {
+        if (!action.url) return { success: false, message: "URL is required" };
+        const domain = extractDomainLocal(action.url);
+        const favicon = domain ? `https://${domain}/favicon.ico` : "";
+        const [bm] = await db.insert(bookmarksTable).values({
+          userId,
+          url: action.url,
+          title: action.title || domain || action.url,
+          description: action.description ?? null,
+          coverImage: null,
+          favicon,
+          domain,
+          type: (action.type as any) || "link",
+          tags: action.tags ?? [],
+          collectionId: action.collectionId ?? null,
+          note: action.note ?? null,
+        }).returning();
+        return { success: true, message: `Added "${bm.title}"`, data: bm };
+      }
+
+      case "delete_bookmark": {
+        const id = Number(action.id);
+        if (!id) return { success: false, message: "Bookmark ID required" };
+        await db.delete(bookmarksTable).where(and(eq(bookmarksTable.id, id), eq(bookmarksTable.userId, userId)));
+        return { success: true, message: `Deleted bookmark #${id}` };
+      }
+
+      case "delete_bookmarks": {
+        const ids = (action.ids as number[]).map(Number).filter(Boolean);
+        if (!ids.length) return { success: false, message: "No IDs provided" };
+        await db.delete(bookmarksTable).where(and(eq(bookmarksTable.userId, userId), inArray(bookmarksTable.id, ids)));
+        return { success: true, message: `Deleted ${ids.length} bookmark${ids.length > 1 ? "s" : ""}` };
+      }
+
+      case "update_bookmark": {
+        const id = Number(action.id);
+        if (!id) return { success: false, message: "Bookmark ID required" };
+        const changes = action.changes || {};
+        const updateData: Record<string, any> = {};
+        if (changes.title != null) updateData.title = changes.title;
+        if (changes.tags !== undefined) updateData.tags = changes.tags;
+        if (changes.note !== undefined) updateData.note = changes.note;
+        if (changes.isFavorite != null) updateData.isFavorite = changes.isFavorite;
+        if (changes.isArchived != null) updateData.isArchived = changes.isArchived;
+        if (changes.isPinned != null) updateData.isPinned = changes.isPinned;
+        if (changes.collectionId !== undefined) updateData.collectionId = changes.collectionId;
+        if (changes.type != null) updateData.type = changes.type;
+        if (!Object.keys(updateData).length) return { success: false, message: "No changes provided" };
+        const [bm] = await db.update(bookmarksTable).set(updateData)
+          .where(and(eq(bookmarksTable.id, id), eq(bookmarksTable.userId, userId))).returning();
+        return { success: !!bm, message: bm ? `Updated "${bm.title}"` : "Bookmark not found" };
+      }
+
+      case "bulk_tag": {
+        const ids = (action.ids as number[]).map(Number).filter(Boolean);
+        const newTags = (action.tags as string[]) || [];
+        if (!ids.length || !newTags.length) return { success: false, message: "IDs and tags required" };
+        const bms = await db.select({ id: bookmarksTable.id, tags: bookmarksTable.tags })
+          .from(bookmarksTable).where(and(eq(bookmarksTable.userId, userId), inArray(bookmarksTable.id, ids)));
+        await Promise.all(bms.map(b =>
+          db.update(bookmarksTable)
+            .set({ tags: [...new Set([...(b.tags || []), ...newTags])] })
+            .where(eq(bookmarksTable.id, b.id))
+        ));
+        return { success: true, message: `Tagged ${ids.length} bookmark${ids.length > 1 ? "s" : ""} with [${newTags.join(", ")}]` };
+      }
+
+      case "remove_tags": {
+        const ids = (action.ids as number[]).map(Number).filter(Boolean);
+        const removeTags = (action.tags as string[]) || [];
+        if (!ids.length) return { success: false, message: "IDs required" };
+        const bms = await db.select({ id: bookmarksTable.id, tags: bookmarksTable.tags })
+          .from(bookmarksTable).where(and(eq(bookmarksTable.userId, userId), inArray(bookmarksTable.id, ids)));
+        await Promise.all(bms.map(b =>
+          db.update(bookmarksTable)
+            .set({ tags: (b.tags || []).filter((t: string) => !removeTags.includes(t)) })
+            .where(eq(bookmarksTable.id, b.id))
+        ));
+        return { success: true, message: `Removed tags [${removeTags.join(", ")}] from ${ids.length} bookmark${ids.length > 1 ? "s" : ""}` };
+      }
+
+      case "create_collection": {
+        if (!action.name) return { success: false, message: "Collection name required" };
+        const [col] = await db.insert(collectionsTable).values({
+          userId,
+          name: action.name,
+          color: action.color || "#6366f1",
+          icon: action.icon || "folder",
+          description: action.description ?? null,
+        }).returning();
+        return { success: true, message: `Created collection "${col.name}"`, data: col };
+      }
+
+      case "move_collection": {
+        const ids = (action.ids as number[]).map(Number).filter(Boolean);
+        if (!ids.length) return { success: false, message: "No IDs provided" };
+        const colId = action.collectionId ? Number(action.collectionId) : null;
+        await db.update(bookmarksTable).set({ collectionId: colId })
+          .where(and(eq(bookmarksTable.userId, userId), inArray(bookmarksTable.id, ids)));
+        return { success: true, message: `Moved ${ids.length} bookmark${ids.length > 1 ? "s" : ""} to ${colId ? "collection" : "root"}` };
+      }
+
+      case "toggle_favorite": {
+        const ids = (action.ids as number[]).map(Number).filter(Boolean);
+        const val = action.value !== false;
+        if (!ids.length) return { success: false, message: "No IDs provided" };
+        await db.update(bookmarksTable).set({ isFavorite: val })
+          .where(and(eq(bookmarksTable.userId, userId), inArray(bookmarksTable.id, ids)));
+        return { success: true, message: `${val ? "Starred" : "Unstarred"} ${ids.length} bookmark${ids.length > 1 ? "s" : ""}` };
+      }
+
+      case "toggle_archive": {
+        const ids = (action.ids as number[]).map(Number).filter(Boolean);
+        const val = action.value !== false;
+        if (!ids.length) return { success: false, message: "No IDs provided" };
+        await db.update(bookmarksTable).set({ isArchived: val })
+          .where(and(eq(bookmarksTable.userId, userId), inArray(bookmarksTable.id, ids)));
+        return { success: true, message: `${val ? "Archived" : "Unarchived"} ${ids.length} bookmark${ids.length > 1 ? "s" : ""}` };
+      }
+
+      case "toggle_pin": {
+        const ids = (action.ids as number[]).map(Number).filter(Boolean);
+        const val = action.value !== false;
+        if (!ids.length) return { success: false, message: "No IDs provided" };
+        await db.update(bookmarksTable).set({ isPinned: val })
+          .where(and(eq(bookmarksTable.userId, userId), inArray(bookmarksTable.id, ids)));
+        return { success: true, message: `${val ? "Pinned" : "Unpinned"} ${ids.length} bookmark${ids.length > 1 ? "s" : ""}` };
+      }
+
+      case "set_note": {
+        const id = Number(action.id);
+        if (!id) return { success: false, message: "Bookmark ID required" };
+        const [bm] = await db.update(bookmarksTable).set({ note: action.note ?? null })
+          .where(and(eq(bookmarksTable.id, id), eq(bookmarksTable.userId, userId))).returning();
+        return { success: !!bm, message: bm ? `Note updated for "${bm.title}"` : "Bookmark not found" };
+      }
+
+      default:
+        return { success: false, message: `Unknown action: "${action.action}"` };
+    }
+  } catch (e: any) {
+    return { success: false, message: e.message || "Action failed" };
+  }
+}
+
 /* ── TEST ─────────────────────────────────────────────── */
 router.post("/gemini/test", async (req, res): Promise<void> => {
   const token = getToken(req);
@@ -61,7 +213,7 @@ router.post("/gemini/test", async (req, res): Promise<void> => {
   }
 });
 
-/* ── CHAT ─────────────────────────────────────────────── */
+/* ── CHAT (legacy) ─────────────────────────────────────────── */
 router.post("/gemini/chat", async (req, res): Promise<void> => {
   const token = getToken(req);
   if (!token) { res.status(401).json({ error: "Not authenticated" }); return; }
@@ -74,19 +226,11 @@ router.post("/gemini/chat", async (req, res): Promise<void> => {
   const { message, history = [] } = req.body;
   if (!message) { res.status(400).json({ error: "message required" }); return; }
 
-  // Load user's bookmarks as context
   const bookmarks = await db.select({
-    id: bookmarksTable.id,
-    title: bookmarksTable.title,
-    url: bookmarksTable.url,
-    domain: bookmarksTable.domain,
-    tags: bookmarksTable.tags,
-    isFavorite: bookmarksTable.isFavorite,
-    isArchived: bookmarksTable.isArchived,
-    isPinned: bookmarksTable.isPinned,
-    collectionId: bookmarksTable.collectionId,
-    type: bookmarksTable.type,
-    note: bookmarksTable.note,
+    id: bookmarksTable.id, title: bookmarksTable.title, url: bookmarksTable.url,
+    domain: bookmarksTable.domain, tags: bookmarksTable.tags, isFavorite: bookmarksTable.isFavorite,
+    isArchived: bookmarksTable.isArchived, isPinned: bookmarksTable.isPinned,
+    collectionId: bookmarksTable.collectionId, type: bookmarksTable.type, note: bookmarksTable.note,
   }).from(bookmarksTable).where(eq(bookmarksTable.userId, userId)).limit(500);
 
   const collections = await db.select().from(collectionsTable).where(eq(collectionsTable.userId, userId));
@@ -130,6 +274,179 @@ Always be helpful, concise, and specific. Reference bookmark titles and IDs when
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
+});
+
+/* ── FULL-POWER ASSISTANT (SSE Streaming + Action Execution) ── */
+router.post("/gemini/assistant", async (req, res): Promise<void> => {
+  const token = getToken(req);
+  if (!token) { res.status(401).json({ error: "Not authenticated" }); return; }
+  const userId = await getUserFromToken(token);
+  if (!userId) { res.status(401).json({ error: "Invalid session" }); return; }
+
+  const apiKey = await getGeminiKey(userId);
+  if (!apiKey) {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.write(`event: error\ndata: ${JSON.stringify({ error: "No Gemini API key. Add it in Settings → AI Settings." })}\n\n`);
+    res.end();
+    return;
+  }
+
+  const { message, history = [] } = req.body;
+  if (!message) { res.status(400).json({ error: "message required" }); return; }
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders();
+
+  const send = (event: string, data: any) => {
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+
+  const start = Date.now();
+
+  try {
+    const bookmarks = await db.select({
+      id: bookmarksTable.id, title: bookmarksTable.title, url: bookmarksTable.url,
+      domain: bookmarksTable.domain, tags: bookmarksTable.tags, isFavorite: bookmarksTable.isFavorite,
+      isArchived: bookmarksTable.isArchived, isPinned: bookmarksTable.isPinned,
+      collectionId: bookmarksTable.collectionId, type: bookmarksTable.type, note: bookmarksTable.note,
+      createdAt: bookmarksTable.createdAt,
+    }).from(bookmarksTable).where(eq(bookmarksTable.userId, userId)).limit(500);
+
+    const collections = await db.select().from(collectionsTable).where(eq(collectionsTable.userId, userId));
+
+    const bookmarkCtx = bookmarks.slice(0, 300).map(b => {
+      const cols = b.collectionId ? ` col:${b.collectionId}` : "";
+      const tags = b.tags?.length ? ` tags:[${b.tags.join(",")}]` : "";
+      const flags = `${b.isFavorite ? " ⭐" : ""}${b.isPinned ? " 📌" : ""}${b.isArchived ? " 📦" : ""}`;
+      return `[ID:${b.id}] "${b.title}" (${b.domain || "?"})${tags}${cols}${flags}`;
+    }).join("\n");
+
+    const colCtx = collections.map(c => `[COL:${c.id}] "${c.name}" color:${c.color}`).join(" | ");
+
+    const systemInstruction = `You are Haven AI — a powerful AI assistant embedded in Link Haven, a bookmark manager. You have COMPLETE CONTROL over the user's bookmarks.
+
+EXECUTION SYSTEM:
+When the user wants to DO something (add, delete, edit, tag, organize, archive, favorite, pin bookmarks), you EXECUTE it directly by including execute commands in your response. These will be automatically run on the server.
+
+EXECUTE COMMANDS (include these in your response to perform actions):
+• Add bookmark:       <execute>{"action":"add_bookmark","url":"https://...","title":"Title","tags":["tag1","tag2"],"collectionId":null,"type":"link"}</execute>
+• Delete one:         <execute>{"action":"delete_bookmark","id":123}</execute>
+• Delete many:        <execute>{"action":"delete_bookmarks","ids":[1,2,3]}</execute>
+• Update bookmark:    <execute>{"action":"update_bookmark","id":123,"changes":{"title":"New Title","tags":["tag"],"isFavorite":true,"isArchived":false,"note":"my note","collectionId":5}}</execute>
+• Add tags to many:   <execute>{"action":"bulk_tag","ids":[1,2,3],"tags":["tag1","tag2"]}</execute>
+• Remove tags:        <execute>{"action":"remove_tags","ids":[1,2,3],"tags":["old-tag"]}</execute>
+• Create collection:  <execute>{"action":"create_collection","name":"Collection Name","color":"#6366f1"}</execute>
+• Move to collection: <execute>{"action":"move_collection","ids":[1,2,3],"collectionId":5}</execute>
+• Star/unstar:        <execute>{"action":"toggle_favorite","ids":[1,2,3],"value":true}</execute>
+• Archive/unarchive:  <execute>{"action":"toggle_archive","ids":[1,2,3],"value":true}</execute>
+• Pin/unpin:          <execute>{"action":"toggle_pin","ids":[1,2,3],"value":true}</execute>
+• Set note:           <execute>{"action":"set_note","id":123,"note":"My note about this"}</execute>
+
+IMPORTANT RULES:
+1. Use REAL IDs from the bookmark/collection context below
+2. Be conversational — explain what you're doing naturally, then include the execute tag
+3. For searches and analysis, just describe findings from the context (no execute needed)
+4. You can include MULTIPLE execute commands in one response
+5. Always confirm what actions you're taking
+6. If the user asks to add a URL, make sure to include the full URL starting with https://
+
+USER'S LIBRARY (${bookmarks.length} bookmarks across ${collections.length} collections):
+Collections: ${colCtx || "none"}
+
+Bookmarks (most recent ${Math.min(300, bookmarks.length)}):
+${bookmarkCtx || "Library is empty"}`;
+
+    const contents = [
+      ...history,
+      { role: "user", parts: [{ text: message }] },
+    ];
+
+    const geminiBody = {
+      contents,
+      systemInstruction: { parts: [{ text: systemInstruction }] },
+      generationConfig: { temperature: 0.75, maxOutputTokens: 3000 },
+    };
+
+    const streamResp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?key=${apiKey}&alt=sse`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(geminiBody),
+      }
+    );
+
+    if (!streamResp.ok) {
+      const errData = await streamResp.json() as any;
+      send("error", { error: errData?.error?.message || `Gemini error ${streamResp.status}` });
+      res.end();
+      return;
+    }
+
+    let fullText = "";
+    let inputTokens = 0;
+    let outputTokens = 0;
+
+    const reader = streamResp.body!.getReader();
+    const decoder = new TextDecoder();
+    let sseBuffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      sseBuffer += decoder.decode(value, { stream: true });
+      const lines = sseBuffer.split("\n");
+      sseBuffer = lines.pop() || "";
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const json = line.slice(6).trim();
+        if (!json || json === "[DONE]") continue;
+        try {
+          const parsed = JSON.parse(json);
+          const chunk = parsed?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          if (chunk) {
+            fullText += chunk;
+            send("chunk", { text: chunk });
+          }
+          const usage = parsed?.usageMetadata;
+          if (usage) {
+            inputTokens = usage.promptTokenCount || 0;
+            outputTokens = usage.candidatesTokenCount || 0;
+          }
+        } catch { /* ignore parse errors */ }
+      }
+    }
+
+    const execRegex = /<execute>([\s\S]*?)<\/execute>/g;
+    let match;
+    while ((match = execRegex.exec(fullText)) !== null) {
+      try {
+        const action = JSON.parse(match[1].trim());
+        send("action_start", { action });
+        const result = await executeAction(userId, action);
+        send("action_result", { action, result });
+      } catch {
+        send("action_result", { action: { action: "parse_error" }, result: { success: false, message: "Could not parse action" } });
+      }
+    }
+
+    send("done", {
+      stats: {
+        model: "gemini-2.0-flash",
+        inputTokens,
+        outputTokens,
+        latency: Date.now() - start,
+      }
+    });
+  } catch (e: any) {
+    send("error", { error: e.message || "Internal server error" });
+  }
+
+  res.end();
 });
 
 /* ── SUMMARIZE ────────────────────────────────────────── */
@@ -193,8 +510,8 @@ Example output: ["javascript","tutorial","react","frontend"]`
       }
     ]);
 
-    const match = text.match(/\[.*?\]/s);
-    const tags = match ? JSON.parse(match[0]) : [];
+    const m = text.match(/\[.*?\]/s);
+    const tags = m ? JSON.parse(m[0]) : [];
     res.json({ tags: tags.filter((t: any) => typeof t === "string").slice(0, 6) });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -212,10 +529,8 @@ router.post("/gemini/organize", async (req, res): Promise<void> => {
   if (!apiKey) { res.status(400).json({ error: "No Gemini API key configured." }); return; }
 
   const bookmarks = await db.select({
-    id: bookmarksTable.id,
-    title: bookmarksTable.title,
-    domain: bookmarksTable.domain,
-    tags: bookmarksTable.tags,
+    id: bookmarksTable.id, title: bookmarksTable.title,
+    domain: bookmarksTable.domain, tags: bookmarksTable.tags,
   }).from(bookmarksTable)
     .where(and(eq(bookmarksTable.userId, userId), eq(bookmarksTable.isArchived, false)))
     .limit(100);
