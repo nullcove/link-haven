@@ -21,6 +21,93 @@ async function getGeminiKey(userId: number): Promise<string | null> {
   return settings?.geminiApiKey ?? null;
 }
 
+/* ── Active provider resolution ────────────────────────────── */
+type ProviderInfo = {
+  provider: "gemini" | "openai" | "openrouter" | "groq" | "mistral" | "together" | "cohere" | "ollama";
+  label: string;
+  key: string;
+  model: string;
+  baseUrl?: string;
+  models?: string[];
+};
+
+async function getOllamaModels(baseUrl: string): Promise<string[]> {
+  try {
+    const r = await fetch(`${baseUrl}/api/tags`, { signal: AbortSignal.timeout(5000) });
+    if (!r.ok) return [];
+    const data = await r.json() as any;
+    return (data?.models ?? []).map((m: any) => m.name as string).filter(Boolean);
+  } catch { return []; }
+}
+
+async function getActiveProvider(userId: number): Promise<ProviderInfo | null> {
+  const [s] = await db.select().from(userSettingsTable).where(eq(userSettingsTable.userId, userId));
+  if (!s) return null;
+  if (s.geminiApiKey)        return { provider: "gemini",      label: "Gemini",      key: s.geminiApiKey,        model: "gemini-2.0-flash" };
+  if ((s as any).openaiApiKey)     return { provider: "openai",      label: "OpenAI",      key: (s as any).openaiApiKey,     model: "gpt-4o-mini",   baseUrl: "https://api.openai.com/v1" };
+  if ((s as any).openrouterApiKey) return { provider: "openrouter",  label: "OpenRouter",  key: (s as any).openrouterApiKey, model: "openai/gpt-4o-mini", baseUrl: "https://openrouter.ai/api/v1" };
+  if ((s as any).groqApiKey)       return { provider: "groq",        label: "Groq",        key: (s as any).groqApiKey,       model: "llama-3.3-70b-versatile", baseUrl: "https://api.groq.com/openai/v1" };
+  if ((s as any).mistralApiKey)    return { provider: "mistral",     label: "Mistral",     key: (s as any).mistralApiKey,    model: "mistral-medium", baseUrl: "https://api.mistral.ai/v1" };
+  if ((s as any).togetherApiKey)   return { provider: "together",    label: "Together",    key: (s as any).togetherApiKey,   model: "meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo", baseUrl: "https://api.together.xyz/v1" };
+  if ((s as any).cohereApiKey)     return { provider: "cohere",      label: "Cohere",      key: (s as any).cohereApiKey,     model: "command-r-plus", baseUrl: "https://api.cohere.ai/compatibility/v1" };
+  if (s.ollamaBaseUrl) {
+    const models = await getOllamaModels(s.ollamaBaseUrl);
+    const model = models[0] || "llama3.2";
+    return { provider: "ollama", label: "Ollama", key: "", model, baseUrl: s.ollamaBaseUrl, models };
+  }
+  return null;
+}
+
+/* ── OpenAI-compatible streaming helper ────────────────────── */
+async function streamOpenAI(
+  baseUrl: string, key: string, model: string,
+  messages: Array<{ role: string; content: string }>,
+  onChunk: (text: string) => void
+): Promise<{ inputTokens: number; outputTokens: number }> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (key) headers["Authorization"] = `Bearer ${key}`;
+  const resp = await fetch(`${baseUrl}/chat/completions`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ model, messages, stream: true, max_tokens: 3000, temperature: 0.75 }),
+  });
+  if (!resp.ok) {
+    const err = await resp.json() as any;
+    throw new Error(err?.error?.message || `${model} error ${resp.status}`);
+  }
+  const reader = resp.body!.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  let inputTokens = 0, outputTokens = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const lines = buf.split("\n");
+    buf = lines.pop() || "";
+    for (const line of lines) {
+      if (!line.startsWith("data: ")) continue;
+      const json = line.slice(6).trim();
+      if (!json || json === "[DONE]") continue;
+      try {
+        const d = JSON.parse(json);
+        const chunk = d?.choices?.[0]?.delta?.content;
+        if (chunk) onChunk(chunk);
+        if (d?.usage) { inputTokens = d.usage.prompt_tokens || 0; outputTokens = d.usage.completion_tokens || 0; }
+      } catch { /* ignore */ }
+    }
+  }
+  return { inputTokens, outputTokens };
+}
+
+/* ── Convert Gemini history → OpenAI messages ──────────────── */
+function geminiHistoryToOpenAI(history: any[]): Array<{ role: string; content: string }> {
+  return history.map(h => ({
+    role: h.role === "model" ? "assistant" : "user",
+    content: Array.isArray(h.parts) ? h.parts.map((p: any) => p.text || "").join("") : (h.content || ""),
+  }));
+}
+
 async function callGemini(apiKey: string, contents: any[], systemInstruction?: string) {
   const body: any = { contents };
   if (systemInstruction) {
@@ -193,6 +280,17 @@ async function executeAction(userId: number, action: any): Promise<{ success: bo
   }
 }
 
+/* ── ACTIVE PROVIDER INFO ─────────────────────────────────── */
+router.get("/ai/active", async (req, res): Promise<void> => {
+  const token = getToken(req);
+  if (!token) { res.status(401).json({ error: "Not authenticated" }); return; }
+  const userId = await getUserFromToken(token);
+  if (!userId) { res.status(401).json({ error: "Invalid session" }); return; }
+  const info = await getActiveProvider(userId);
+  if (!info) { res.json({ provider: null, label: null, model: null, models: [] }); return; }
+  res.json({ provider: info.provider, label: info.label, model: info.model, models: info.models ?? [] });
+});
+
 /* ── TEST ─────────────────────────────────────────────── */
 router.post("/gemini/test", async (req, res): Promise<void> => {
   const token = getToken(req);
@@ -276,24 +374,12 @@ Always be helpful, concise, and specific. Reference bookmark titles and IDs when
   }
 });
 
-/* ── FULL-POWER ASSISTANT (SSE Streaming + Action Execution) ── */
+/* ── FULL-POWER ASSISTANT (SSE Streaming + Action Execution, multi-provider) ── */
 router.post("/gemini/assistant", async (req, res): Promise<void> => {
   const token = getToken(req);
   if (!token) { res.status(401).json({ error: "Not authenticated" }); return; }
   const userId = await getUserFromToken(token);
   if (!userId) { res.status(401).json({ error: "Invalid session" }); return; }
-
-  const apiKey = await getGeminiKey(userId);
-  if (!apiKey) {
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.write(`event: error\ndata: ${JSON.stringify({ error: "No Gemini API key. Add it in Settings → AI Settings." })}\n\n`);
-    res.end();
-    return;
-  }
-
-  const { message, history = [] } = req.body;
-  if (!message) { res.status(400).json({ error: "message required" }); return; }
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -305,18 +391,30 @@ router.post("/gemini/assistant", async (req, res): Promise<void> => {
     res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
   };
 
+  const { message, history = [], model: requestedModel } = req.body;
+  if (!message) { send("error", { error: "message required" }); res.end(); return; }
+
+  const providerInfo = await getActiveProvider(userId);
+  if (!providerInfo) {
+    send("error", { error: "No AI provider configured. Add an API key or Ollama URL in Settings → AI Settings." });
+    res.end();
+    return;
+  }
+
+  const activeModel = requestedModel || providerInfo.model;
   const start = Date.now();
 
   try {
-    const bookmarks = await db.select({
-      id: bookmarksTable.id, title: bookmarksTable.title, url: bookmarksTable.url,
-      domain: bookmarksTable.domain, tags: bookmarksTable.tags, isFavorite: bookmarksTable.isFavorite,
-      isArchived: bookmarksTable.isArchived, isPinned: bookmarksTable.isPinned,
-      collectionId: bookmarksTable.collectionId, type: bookmarksTable.type, note: bookmarksTable.note,
-      createdAt: bookmarksTable.createdAt,
-    }).from(bookmarksTable).where(eq(bookmarksTable.userId, userId)).limit(500);
-
-    const collections = await db.select().from(collectionsTable).where(eq(collectionsTable.userId, userId));
+    const [bookmarks, collections] = await Promise.all([
+      db.select({
+        id: bookmarksTable.id, title: bookmarksTable.title, url: bookmarksTable.url,
+        domain: bookmarksTable.domain, tags: bookmarksTable.tags, isFavorite: bookmarksTable.isFavorite,
+        isArchived: bookmarksTable.isArchived, isPinned: bookmarksTable.isPinned,
+        collectionId: bookmarksTable.collectionId, type: bookmarksTable.type, note: bookmarksTable.note,
+        createdAt: bookmarksTable.createdAt,
+      }).from(bookmarksTable).where(eq(bookmarksTable.userId, userId)).limit(500),
+      db.select().from(collectionsTable).where(eq(collectionsTable.userId, userId)),
+    ]);
 
     const bookmarkCtx = bookmarks.slice(0, 300).map(b => {
       const cols = b.collectionId ? ` col:${b.collectionId}` : "";
@@ -360,65 +458,62 @@ Collections: ${colCtx || "none"}
 Bookmarks (most recent ${Math.min(300, bookmarks.length)}):
 ${bookmarkCtx || "Library is empty"}`;
 
-    const contents = [
-      ...history,
-      { role: "user", parts: [{ text: message }] },
-    ];
-
-    const geminiBody = {
-      contents,
-      systemInstruction: { parts: [{ text: systemInstruction }] },
-      generationConfig: { temperature: 0.75, maxOutputTokens: 3000 },
-    };
-
-    const streamResp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?key=${apiKey}&alt=sse`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(geminiBody),
-      }
-    );
-
-    if (!streamResp.ok) {
-      const errData = await streamResp.json() as any;
-      send("error", { error: errData?.error?.message || `Gemini error ${streamResp.status}` });
-      res.end();
-      return;
-    }
-
     let fullText = "";
     let inputTokens = 0;
     let outputTokens = 0;
 
-    const reader = streamResp.body!.getReader();
-    const decoder = new TextDecoder();
-    let sseBuffer = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      sseBuffer += decoder.decode(value, { stream: true });
-      const lines = sseBuffer.split("\n");
-      sseBuffer = lines.pop() || "";
-      for (const line of lines) {
-        if (!line.startsWith("data: ")) continue;
-        const json = line.slice(6).trim();
-        if (!json || json === "[DONE]") continue;
-        try {
-          const parsed = JSON.parse(json);
-          const chunk = parsed?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-          if (chunk) {
-            fullText += chunk;
-            send("chunk", { text: chunk });
-          }
-          const usage = parsed?.usageMetadata;
-          if (usage) {
-            inputTokens = usage.promptTokenCount || 0;
-            outputTokens = usage.candidatesTokenCount || 0;
-          }
-        } catch { /* ignore parse errors */ }
+    if (providerInfo.provider === "gemini") {
+      const contents = [
+        ...history,
+        { role: "user", parts: [{ text: message }] },
+      ];
+      const geminiBody = {
+        contents,
+        systemInstruction: { parts: [{ text: systemInstruction }] },
+        generationConfig: { temperature: 0.75, maxOutputTokens: 3000 },
+      };
+      const streamResp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:streamGenerateContent?key=${providerInfo.key}&alt=sse`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(geminiBody) }
+      );
+      if (!streamResp.ok) {
+        const errData = await streamResp.json() as any;
+        send("error", { error: errData?.error?.message || `Gemini error ${streamResp.status}` });
+        res.end(); return;
       }
+      const reader = streamResp.body!.getReader();
+      const decoder = new TextDecoder();
+      let sseBuffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        sseBuffer += decoder.decode(value, { stream: true });
+        const lines = sseBuffer.split("\n"); sseBuffer = lines.pop() || "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const json = line.slice(6).trim();
+          if (!json || json === "[DONE]") continue;
+          try {
+            const parsed = JSON.parse(json);
+            const chunk = parsed?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+            if (chunk) { fullText += chunk; send("chunk", { text: chunk }); }
+            const usage = parsed?.usageMetadata;
+            if (usage) { inputTokens = usage.promptTokenCount || 0; outputTokens = usage.candidatesTokenCount || 0; }
+          } catch { /* ignore */ }
+        }
+      }
+    } else {
+      const oaiMessages = [
+        { role: "system" as const, content: systemInstruction },
+        ...geminiHistoryToOpenAI(history),
+        { role: "user" as const, content: message },
+      ];
+      const usage = await streamOpenAI(
+        providerInfo.baseUrl!, providerInfo.key, activeModel, oaiMessages,
+        (chunk) => { fullText += chunk; send("chunk", { text: chunk }); }
+      );
+      inputTokens = usage.inputTokens;
+      outputTokens = usage.outputTokens;
     }
 
     const execRegex = /<execute>([\s\S]*?)<\/execute>/g;
@@ -435,12 +530,7 @@ ${bookmarkCtx || "Library is empty"}`;
     }
 
     send("done", {
-      stats: {
-        model: "gemini-2.0-flash",
-        inputTokens,
-        outputTokens,
-        latency: Date.now() - start,
-      }
+      stats: { model: activeModel, inputTokens, outputTokens, latency: Date.now() - start }
     });
   } catch (e: any) {
     send("error", { error: e.message || "Internal server error" });

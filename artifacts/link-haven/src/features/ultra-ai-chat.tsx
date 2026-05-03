@@ -11,6 +11,13 @@ import { cn } from "@/lib/utils";
 import { getAuthToken } from "@/lib/auth";
 import { useQueryClient } from "@tanstack/react-query";
 
+type ProviderInfo = {
+  provider: string | null;
+  label: string | null;
+  model: string | null;
+  models: string[];
+};
+
 /* ─── Types ───────────────────────────────────────────────── */
 type ChatStats = { model: string; inputTokens: number; outputTokens: number; latency: number };
 type ActionResult = { action: any; result: { success: boolean; message: string; data?: any } };
@@ -205,6 +212,9 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
   const [lastStats, setLastStats] = useState<ChatStats | null>(null);
   const [ping, setPing] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
+  const [providerInfo, setProviderInfo] = useState<ProviderInfo | null>(null);
+  const [selectedModel, setSelectedModel] = useState<string>("");
+  const [showModelPicker, setShowModelPicker] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -219,6 +229,18 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
 
   useEffect(() => {
     inputRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    const BASE = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
+    const token = getAuthToken();
+    fetch(`${BASE}/api/ai/active`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then((info: ProviderInfo) => {
+        setProviderInfo(info);
+        setSelectedModel(info.model || "");
+      })
+      .catch(() => {});
   }, []);
 
   const send = useCallback(async (text?: string) => {
@@ -249,7 +271,7 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
       const resp = await fetch(`${BASE}/api/gemini/assistant`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ message: msg, history }),
+        body: JSON.stringify({ message: msg, history, model: selectedModel || undefined }),
         signal: controller.signal,
       });
 
@@ -409,10 +431,47 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <h2 className="_ai-title text-[15px] font-bold tracking-tight">Haven AI</h2>
-                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 font-semibold">online</span>
+                {providerInfo?.provider
+                  ? <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 font-semibold">online</span>
+                  : <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-400 font-semibold">no provider</span>
+                }
               </div>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-[10px] text-white/70 font-mono _ai-glass-ui">gemini-2.0-flash</span>
+              <div className="flex items-center gap-1.5 mt-0.5 relative">
+                {providerInfo?.provider ? (
+                  providerInfo.models && providerInfo.models.length > 1 ? (
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowModelPicker(v => !v)}
+                        className="flex items-center gap-1 text-[10px] text-white/70 font-mono _ai-glass-ui hover:text-white/90 transition-colors"
+                      >
+                        <span className="text-violet-400/80">{providerInfo.label}</span>
+                        <span className="text-white/30">·</span>
+                        <span>{selectedModel || providerInfo.model}</span>
+                        <ChevronDown className="size-2.5 text-white/40" />
+                      </button>
+                      {showModelPicker && (
+                        <div className="absolute top-5 left-0 z-50 rounded-lg border border-white/15 overflow-hidden shadow-xl"
+                          style={{ background: "rgba(15,10,40,0.97)", minWidth: 200, maxHeight: 200, overflowY: "auto" }}>
+                          {providerInfo.models.map(m => (
+                            <button key={m} onClick={() => { setSelectedModel(m); setShowModelPicker(false); }}
+                              className={cn("w-full text-left px-3 py-2 text-[11px] font-mono hover:bg-white/[0.07] transition-colors",
+                                m === (selectedModel || providerInfo.model) ? "text-violet-300 bg-violet-500/10" : "text-white/70")}>
+                              {m}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-[10px] text-white/70 font-mono _ai-glass-ui">
+                      <span className="text-violet-400/80">{providerInfo.label}</span>
+                      <span className="text-white/30"> · </span>
+                      {selectedModel || providerInfo.model}
+                    </span>
+                  )
+                ) : (
+                  <span className="text-[10px] text-amber-400/70 font-mono _ai-glass-ui">add API key in Settings</span>
+                )}
                 {ping !== null && <><span className="text-white/40 _ai-glass-ui">·</span><span className="text-[10px] text-white/70 font-mono _ai-glass-ui">{ping}ms</span></>}
               </div>
             </div>
