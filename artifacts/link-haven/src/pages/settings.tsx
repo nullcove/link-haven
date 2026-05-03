@@ -9,7 +9,7 @@ import {
   LayoutGrid, List, Zap, Check, Image as ImageIcon, X, Key,
 } from "lucide-react";
 import { Link } from "wouter";
-import { BACKGROUNDS, useBg } from "@/lib/background";
+import { BACKGROUNDS, BG_CATEGORIES, BG_CATEGORY_META, useBg } from "@/lib/background";
 
 /* ─── CSS ─────────────────────────────────────────────────────── */
 const CSS = `
@@ -163,72 +163,105 @@ function StatTile({ icon: Ic, label, value, color, delay = 0 }: { icon: React.El
 
 /* ─── Background picker ──────────────────────────────────────── */
 function BgPicker() {
-  const { bgId, setBg } = useBg();
+  const { bgId, bgItem, setBg } = useBg();
+
   return (
-    <div>
-      <div className="grid grid-cols-5 gap-2 mb-3">
-        {/* None option */}
-        <button
-          onClick={() => setBg(null)}
-          className="_s-bg-card relative rounded-xl overflow-hidden border-2 flex flex-col items-center justify-center gap-1.5 cursor-pointer"
-          style={{
-            height: 72,
-            background: "linear-gradient(145deg, #0d0d14, #0a0a10)",
-            borderColor: bgId === null ? "rgba(99,102,241,.7)" : "rgba(255,255,255,.08)",
-            boxShadow: bgId === null ? "0 0 14px rgba(99,102,241,.3), inset 0 1px 0 rgba(99,102,241,.1)" : "",
-          }}>
-          {bgId === null && <Check className="size-4 text-indigo-400 absolute top-1.5 right-1.5" />}
-          <X className="size-4 text-white/25" />
-          <span className="text-[9.5px] text-white/28 font-semibold">None</span>
-        </button>
+    <div className="space-y-5">
 
-        {BACKGROUNDS.slice(0, 4).map(bg => (
-          <button key={bg.id} onClick={() => setBg(bg.id)}
-            className="_s-bg-card relative rounded-xl overflow-hidden border-2 cursor-pointer"
-            style={{
-              height: 72,
-              borderColor: bgId === bg.id ? "rgba(99,102,241,.7)" : "rgba(255,255,255,.08)",
-              boxShadow: bgId === bg.id ? "0 0 14px rgba(99,102,241,.3)" : "",
-            }}>
-            <img src={bg.path} alt={bg.name} className="absolute inset-0 w-full h-full object-cover" draggable={false} />
-            <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,.7) 0%, rgba(0,0,0,.1) 60%)" }} />
-            {bgId === bg.id && (
-              <span className="_s-bg-sel absolute top-1.5 right-1.5 size-5 rounded-full flex items-center justify-center"
-                style={{ background: "rgba(99,102,241,.9)", boxShadow: "0 0 8px rgba(99,102,241,.6)" }}>
-                <Check className="size-3 text-white" />
-              </span>
-            )}
-            <span className="absolute bottom-1.5 left-2 text-[8.5px] font-bold text-white/70 leading-tight">{bg.emoji} {bg.name}</span>
-          </button>
-        ))}
-      </div>
+      {/* ── Active preview banner ────────────────────────── */}
+      {bgItem ? (
+        <div className="relative rounded-2xl overflow-hidden border border-white/[0.08]" style={{ height: 96 }}>
+          <img src={bgItem.path} alt={bgItem.name} className="absolute inset-0 w-full h-full object-cover" draggable={false} />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(4,4,11,.82) 0%, rgba(4,4,11,.4) 60%, transparent 100%)" }} />
+          <div className="absolute inset-0 flex items-center justify-between px-5">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40 mb-1">Active Wallpaper</p>
+              <p className="text-[15px] font-black text-white leading-none">{bgItem.name}</p>
+              <p className="text-[10.5px] mt-1 font-semibold"
+                style={{ color: BG_CATEGORY_META[bgItem.category].accent }}>
+                {BG_CATEGORY_META[bgItem.category].glyph} {bgItem.category}
+              </p>
+            </div>
+            <button onClick={() => setBg(null)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all hover:scale-105 active:scale-95"
+              style={{ background: "rgba(0,0,0,.5)", borderColor: "rgba(255,255,255,.12)", color: "rgba(255,255,255,.45)", backdropFilter: "blur(8px)" }}>
+              <X className="size-3" /> Remove
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-white/[0.06]"
+          style={{ background: "rgba(255,255,255,.02)" }}>
+          <div className="size-8 rounded-lg flex items-center justify-center"
+            style={{ background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.07)" }}>
+            <X className="size-3.5 text-white/20" />
+          </div>
+          <p className="text-[12px] text-white/28">No wallpaper selected — using solid dark background</p>
+        </div>
+      )}
 
-      <div className="grid grid-cols-5 gap-2">
-        {BACKGROUNDS.slice(4).map(bg => (
-          <button key={bg.id} onClick={() => setBg(bg.id)}
-            className="_s-bg-card relative rounded-xl overflow-hidden border-2 cursor-pointer"
-            style={{
-              height: 72,
-              borderColor: bgId === bg.id ? "rgba(99,102,241,.7)" : "rgba(255,255,255,.08)",
-              boxShadow: bgId === bg.id ? "0 0 14px rgba(99,102,241,.3)" : "",
-            }}>
-            <img src={bg.path} alt={bg.name} className="absolute inset-0 w-full h-full object-cover" draggable={false} />
-            <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,.7) 0%, rgba(0,0,0,.1) 60%)" }} />
-            {bgId === bg.id && (
-              <span className="_s-bg-sel absolute top-1.5 right-1.5 size-5 rounded-full flex items-center justify-center"
-                style={{ background: "rgba(99,102,241,.9)", boxShadow: "0 0 8px rgba(99,102,241,.6)" }}>
-                <Check className="size-3 text-white" />
-              </span>
-            )}
-            <span className="absolute bottom-1.5 left-2 text-[8.5px] font-bold text-white/70 leading-tight">{bg.emoji} {bg.name}</span>
-          </button>
-        ))}
-      </div>
+      {/* ── Category sections ─────────────────────────────── */}
+      {BG_CATEGORIES.map(cat => {
+        const meta = BG_CATEGORY_META[cat];
+        const items = BACKGROUNDS.filter(b => b.category === cat);
+        return (
+          <div key={cat}>
+            {/* Category header */}
+            <div className="flex items-center gap-2 mb-2.5">
+              <span className="text-[13px] font-black" style={{ color: meta.accent }}>{meta.glyph}</span>
+              <span className="text-[11.5px] font-black text-white/70 uppercase tracking-[0.16em]">{cat}</span>
+              <span className="text-[10px] text-white/20 ml-1">{items.length}</span>
+              <div className="flex-1 h-px ml-1" style={{ background: `linear-gradient(to right, ${meta.accent}25, transparent)` }} />
+            </div>
+
+            <div className="grid grid-cols-4 gap-2">
+              {items.map(bg => {
+                const sel = bgId === bg.id;
+                return (
+                  <button key={bg.id} onClick={() => setBg(sel ? null : bg.id)}
+                    className="_s-bg-card relative rounded-xl overflow-hidden cursor-pointer"
+                    style={{
+                      paddingBottom: "56.25%", /* 16:9 */
+                      border: `2px solid ${sel ? meta.accent : "rgba(255,255,255,.07)"}`,
+                      boxShadow: sel
+                        ? `0 0 0 1px ${meta.accent}50, 0 4px 20px ${meta.accent}35`
+                        : "0 2px 8px rgba(0,0,0,.3)",
+                    }}>
+                    <img
+                      src={bg.path} alt={bg.name}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      draggable={false}
+                      loading="lazy"
+                    />
+                    {/* gradient overlay */}
+                    <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,.72) 0%, rgba(0,0,0,.08) 55%)" }} />
+                    {/* color tint on hover handled by _s-bg-card */}
+                    {sel && (
+                      <>
+                        {/* selected tint */}
+                        <div className="absolute inset-0" style={{ background: `${meta.accent}18` }} />
+                        {/* checkmark badge */}
+                        <span className="_s-bg-sel absolute top-2 right-2 size-[18px] rounded-full flex items-center justify-center shrink-0"
+                          style={{ background: meta.accent, boxShadow: `0 0 10px ${meta.accent}80` }}>
+                          <Check className="size-2.5 text-white" strokeWidth={3} />
+                        </span>
+                      </>
+                    )}
+                    <span className="absolute bottom-1.5 left-2 right-8 text-[8px] font-bold text-white/75 leading-tight truncate">
+                      {bg.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
 
       {bgId !== null && (
-        <p className="mt-3 text-[11px] text-indigo-300/60 flex items-center gap-1.5">
-          <Check className="size-3" />
-          Background active — visible at low opacity behind the app
+        <p className="text-[10.5px] flex items-center gap-1.5" style={{ color: "rgba(255,255,255,.28)" }}>
+          <Check className="size-3 shrink-0" style={{ color: "rgba(99,102,241,.7)" }} />
+          Wallpaper is visible behind the entire app — click again to deselect
         </p>
       )}
     </div>

@@ -78,3 +78,63 @@ id = "RRvCPUhsLG_tAEH1GS9wB"
 uri = "file://artifacts/link-haven/public/backgrounds/bg10.png"
 type = "image"
 title = "milky-way-mountains-lake"
+
+[[generated]]
+id = "D8dCPdQiDb8HfLZZhZvHy"
+uri = "file://artifacts/link-haven/public/backgrounds/bg11.png"
+type = "image"
+title = "black-hole-accretion"
+
+[[generated]]
+id = "T_qlsmNC0pyYU5vfNFwnf"
+uri = "file://artifacts/link-haven/public/backgrounds/bg12.png"
+type = "image"
+title = "asteroid-belt-space"
+
+[[generated]]
+id = "tJzlE9ew6IJoZTfin3Jq9"
+uri = "file://artifacts/link-haven/public/backgrounds/bg13.png"
+type = "image"
+title = "alien-exoplanet-night"
+
+[[generated]]
+id = "8rxvxi_h8s19rlrPQayQl"
+uri = "file://artifacts/link-haven/public/backgrounds/bg14.png"
+type = "image"
+title = "galaxy-collision-space"
+
+[[generated]]
+id = "45hPB9pzbR0Ofh_XSzIp7"
+uri = "file://artifacts/link-haven/public/backgrounds/bg15.png"
+type = "image"
+title = "pulsar-neutron-star"
+
+[[generated]]
+id = "pSsxIHinQLqHNFRFCmLyU"
+uri = "file://artifacts/link-haven/public/backgrounds/bg16.png"
+type = "image"
+title = "cyberpunk-alley-neon"
+
+[[generated]]
+id = "AIiqvYaBPC9exuxr941oP"
+uri = "file://artifacts/link-haven/public/backgrounds/bg17.png"
+type = "image"
+title = "dark-skyscraper-glass"
+
+[[generated]]
+id = "MyCRPjemidsAsRlQ2S_jl"
+uri = "file://artifacts/link-haven/public/backgrounds/bg18.png"
+type = "image"
+title = "dark-metro-station"
+
+[[generated]]
+id = "K4lY4UNUqrLFXxtNL9_wK"
+uri = "file://artifacts/link-haven/public/backgrounds/bg19.png"
+type = "image"
+title = "tokyo-rooftop-night"
+
+[[generated]]
+id = "oE7xmqukG3dCJot_q5rpj"
+uri = "file://artifacts/link-haven/public/backgrounds/bg20.png"
+type = "image"
+title = "dark-harbor-neon"

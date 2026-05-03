@@ -22,24 +22,19 @@ export function AppLayout({ children }: { children: ReactNode }) {
     query: { queryKey: getListBookmarksQueryKey() },
   });
 
-  /* ── Apply background image directly on body ──────────────────
-     body has `bg-background` from Tailwind (index.css line ~208).
-     Inline style on element.style always wins over CSS classes,
-     so setting document.body.style.background overrides that class.
+  /* ── Background on body ─────────────────────────────────────────
+     We set backgroundColor=transparent when bgPath is active so
+     the fixed-position bg layer beneath shows through. When no bg,
+     remove the inline style and let the Tailwind bg-background class
+     (dark solid) take over again automatically.
   ─────────────────────────────────────────────────────────────── */
   useEffect(() => {
     if (bgPath) {
-      document.body.style.background =
-        `linear-gradient(rgba(4,4,11,.52),rgba(4,4,11,.52)), url(${bgPath}) center/cover no-repeat`;
-      document.body.style.backgroundAttachment = "fixed";
+      document.body.style.backgroundColor = "transparent";
     } else {
-      document.body.style.background = "";
-      document.body.style.backgroundAttachment = "";
+      document.body.style.backgroundColor = "";
     }
-    return () => {
-      document.body.style.background = "";
-      document.body.style.backgroundAttachment = "";
-    };
+    return () => { document.body.style.backgroundColor = ""; };
   }, [bgPath]);
 
   useEffect(() => {
@@ -77,26 +72,46 @@ export function AppLayout({ children }: { children: ReactNode }) {
   if (isError || !user) return null;
 
   return (
-    <SidebarProvider defaultOpen={true}>
-      {/*
-        All containers must be transparent so the body background shows through.
-        SidebarInset has `bg-background` Tailwind class — override with inline style.
-        Sidebar gets glass effect when bgActive.
-      */}
-      <div className="flex min-h-screen w-full text-foreground" style={{ background: "transparent" }}>
-        <AppSidebar user={user} onOpenGemini={() => setGeminiOpen(v => !v)} bgActive={!!bgPath} />
-        <SidebarInset
-          className="flex-1 overflow-hidden"
-          style={{ background: "transparent" }}
+    <>
+      {/* ── Fixed background layer — fades in/out with CSS keyframe ── */}
+      <style>{`
+        @keyframes _bg-fade { from { opacity: 0 } to { opacity: 1 } }
+        ._bg-layer { animation: _bg-fade .7s ease both; }
+      `}</style>
+
+      {bgPath && (
+        <div
+          key={bgPath}
+          className="_bg-layer"
+          style={{
+            position: "fixed", inset: 0, zIndex: 0,
+            backgroundImage: `url(${bgPath})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
         >
-          <main className="flex flex-col h-[100dvh] overflow-hidden" style={{ background: "transparent" }}>
-            {children}
-          </main>
-        </SidebarInset>
-      </div>
-      {geminiOpen && (
-        <GeminiChat onClose={() => setGeminiOpen(false)} bookmarks={allBookmarks as any} />
+          {/* dark tint overlay for readability */}
+          <div style={{ position: "absolute", inset: 0, background: "rgba(4,4,11,.46)" }} />
+        </div>
       )}
-    </SidebarProvider>
+
+      <SidebarProvider defaultOpen={true}>
+        {/* z-index:1 so content sits above the fixed bg layer */}
+        <div className="flex min-h-screen w-full text-foreground" style={{ background: "transparent", position: "relative", zIndex: 1 }}>
+          <AppSidebar user={user} onOpenGemini={() => setGeminiOpen(v => !v)} bgActive={!!bgPath} />
+          <SidebarInset
+            className="flex-1 overflow-hidden"
+            style={{ background: "transparent" }}
+          >
+            <main className="flex flex-col h-[100dvh] overflow-hidden" style={{ background: "transparent" }}>
+              {children}
+            </main>
+          </SidebarInset>
+        </div>
+        {geminiOpen && (
+          <GeminiChat onClose={() => setGeminiOpen(false)} bookmarks={allBookmarks as any} />
+        )}
+      </SidebarProvider>
+    </>
   );
 }
