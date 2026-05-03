@@ -284,7 +284,12 @@ async function getActiveAiKey(userId: number): Promise<{ provider: string; key: 
 }
 
 async function summarizeText(provider: string, key: string, pageText: string, pageTitle: string, opts?: { baseUrl?: string; model?: string }): Promise<string> {
-  const prompt = `You are a smart bookmark note-taker. Given the following web page content, write a concise, well-structured summary note in 3-5 sentences. Focus on: what the page is about, key points, and why it might be useful to save. Be clear and informative. Page title: "${pageTitle}"\n\nContent:\n${pageText}`;
+  const prompt = `You are a smart bookmark note-taker. Given the following content, write a concise, well-structured summary note in 3-5 sentences. Focus on: what the page is about, key points, and why it might be useful to save. Be clear and informative. If the content is sparse, use the title as context but do not repeat it unnecessarily.
+
+Title: ${pageTitle}
+
+Content:
+${pageText}`;
 
   if (provider === "gemini") {
     const body = {
@@ -363,7 +368,7 @@ router.post("/bookmarks", async (req, res): Promise<void> => {
         try { pageText = await scrapeWithJina(url); } catch { /* fall back to title-only */ }
         const contextForAi = pageText && pageText.length >= 100
           ? pageText
-          : `URL: ${url}\nTitle: ${finalTitle}\n\n(Page content could not be fetched. Write a helpful note based on the URL and title alone.)`;
+          : `URL: ${url}\n\n(Page content could not be fetched. Write a helpful note based on the URL and title alone.)`;
         const summary = await summarizeText(aiCreds.provider, aiCreds.key, contextForAi, finalTitle, { baseUrl: aiCreds.baseUrl, model: aiCreds.model });
         if (!summary) return;
         await db.update(bookmarksTable)
@@ -404,7 +409,7 @@ router.post("/bookmarks/:id/summarize", async (req, res): Promise<void> => {
 
     const contextForAi = pageText && pageText.length >= 100
       ? pageText
-      : `URL: ${bookmark.url}\nTitle: ${bookmark.title || bookmark.url}\n\n(Page content could not be fetched. Write a helpful note based on the URL and title alone.)`;
+      : `URL: ${bookmark.url}\n\n(Page content could not be fetched. Write a helpful note based on the URL and title alone.)`;
 
     const summary = await summarizeText(aiCreds.provider, aiCreds.key, contextForAi, bookmark.title || bookmark.url, { baseUrl: aiCreds.baseUrl, model: aiCreds.model });
     if (!summary) { res.status(422).json({ error: "AI returned empty summary." }); return; }
