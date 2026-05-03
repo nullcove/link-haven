@@ -448,247 +448,108 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
 
   return (
     <>
-      {/* ── Backdrop ──────────────────────────────────────────── */}
+      {/* Dim backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.28 }}
-        className="fixed inset-0 z-[998] flex items-center justify-center"
-        style={{ background: "rgba(0,0,8,.18)", backdropFilter: "blur(3px)" }}
+        transition={{ duration: 0.22 }}
+        className="fixed inset-0 z-[998]"
+        style={{ background: "rgba(0,0,0,0.42)" }}
         onClick={onClose}
-      >
-      </motion.div>
-
-      {/* ── Burst ring (fires once on open) ───────────────────── */}
-      <motion.div
-        initial={{ opacity: 1, scale: 0.55 }}
-        animate={{ opacity: 0, scale: 2.1 }}
-        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-        className="fixed z-[999] pointer-events-none"
-        style={{
-          top: "50%", left: "50%",
-          width: 520, height: 520,
-          marginTop: -260, marginLeft: -260,
-          borderRadius: "50%",
-          border: "1.5px solid rgba(139,92,246,.55)",
-          boxShadow: "0 0 40px rgba(99,102,241,.3), inset 0 0 40px rgba(139,92,246,.15)",
-        }}
-      />
-      <motion.div
-        initial={{ opacity: 0.7, scale: 0.55 }}
-        animate={{ opacity: 0, scale: 1.75 }}
-        transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1], delay: 0.07 }}
-        className="fixed z-[999] pointer-events-none"
-        style={{
-          top: "50%", left: "50%",
-          width: 520, height: 520,
-          marginTop: -260, marginLeft: -260,
-          borderRadius: "50%",
-          border: "1px solid rgba(99,102,241,.35)",
-        }}
       />
 
-      {/* ── Modal wrapper — flex-center so Framer transform doesn't fight CSS translate ── */}
-      <div
-        className="fixed inset-0 z-[1000] flex items-center justify-center pointer-events-none"
-        style={{ padding: "16px" }}
-      >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.82, y: 36, filter: "blur(14px)" }}
-        animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
-        exit={{ opacity: 0, scale: 0.88, y: 18, filter: "blur(10px)" }}
-        transition={{ type: "spring" as const, stiffness: 400, damping: 32, mass: 0.88 }}
-        className="flex flex-col overflow-hidden pointer-events-auto"
-        style={{
-          width: "min(560px, calc(100vw - 32px))",
-          height: "min(720px, calc(100vh - 56px))",
-          borderRadius: 24,
-          background: "rgba(6,4,22,0.14)",
-          backdropFilter: "blur(72px) saturate(2.8) brightness(1.12)",
-          WebkitBackdropFilter: "blur(72px) saturate(2.8) brightness(1.12)",
-          boxShadow: [
-            "0 0 0 1px rgba(255,255,255,.11)",
-            "0 40px 100px rgba(0,0,0,.55)",
-            "0 8px 32px rgba(0,0,0,.3)",
-            "inset 0 1px 0 rgba(255,255,255,.13)",
-            "inset 0 -1px 0 rgba(255,255,255,.05)",
-          ].join(", "),
-        }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* spinning glow ring outer */}
-        <div className="absolute pointer-events-none"
+      {/* Modal */}
+      <div className="fixed inset-0 z-[999] flex items-center justify-center pointer-events-none" style={{ padding: 20 }}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.94, y: 24 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.94, y: 16 }}
+          transition={{ type: "spring" as const, stiffness: 380, damping: 30 }}
+          className="flex flex-col pointer-events-auto"
           style={{
-            inset: -2, borderRadius: 26, zIndex: 0,
-            background: "transparent",
+            width: "min(560px, calc(100vw - 40px))",
+            height: "min(700px, calc(100vh - 60px))",
+            borderRadius: 20,
             overflow: "hidden",
-          }}>
-          <div className="_ai-ring1 absolute"
-            style={{
-              inset: -80,
-              background: "conic-gradient(from 0deg, transparent 0%, rgba(255,255,255,.0) 30%, rgba(255,255,255,.35) 48%, rgba(200,180,255,.28) 52%, rgba(255,255,255,.0) 70%, transparent 100%)",
-              borderRadius: "50%",
-            }} />
-        </div>
-        {/* spinning glow ring inner (reverse, slower) */}
-        <div className="absolute pointer-events-none"
-          style={{
-            inset: -1, borderRadius: 25, zIndex: 0,
-            overflow: "hidden",
-          }}>
-          <div className="_ai-ring2 absolute"
-            style={{
-              inset: -80,
-              background: "conic-gradient(from 180deg, transparent 0%, rgba(255,255,255,.0) 35%, rgba(255,255,255,.18) 48%, rgba(220,200,255,.14) 52%, rgba(255,255,255,.0) 65%, transparent 100%)",
-              borderRadius: "50%",
-            }} />
-        </div>
+            background: "rgba(10,8,28,0.72)",
+            backdropFilter: "blur(60px) saturate(1.8)",
+            WebkitBackdropFilter: "blur(60px) saturate(1.8)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            boxShadow: "0 32px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)",
+          }}
+          onClick={e => e.stopPropagation()}
+        >
+          {/* ── Header ─────────────────────────────────────────── */}
+          <div className="shrink-0 flex items-center gap-3 px-5 py-4 border-b border-white/[0.07]">
+            <div className="relative shrink-0">
+              <BotOrb />
+              <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-emerald-400 border-2 border-[#0a081c] _ai-ping" />
+            </div>
 
-        {/* ── Subtle edge tint only ─────────────────────────── */}
-        <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 1, borderRadius: 24 }}>
-          <div style={{
-            position: "absolute", inset: 0, borderRadius: 24,
-            background: "radial-gradient(ellipse at 0% 100%, rgba(99,102,241,.1) 0%, transparent 50%), radial-gradient(ellipse at 100% 0%, rgba(139,92,246,.07) 0%, transparent 45%)",
-          }} />
-        </div>
-
-        {/* ── Content ────────────────────────────────────────── */}
-        <div className="relative flex flex-col h-full" style={{ zIndex: 2 }}>
-
-          {/* Header */}
-          <div className="shrink-0 px-4 pt-4 pb-3 border-b border-white/[0.09]"
-            style={{ background: "rgba(255,255,255,0.04)", borderRadius: "24px 24px 0 0" }}>
-            <div className="flex items-center gap-3">
-              {/* Bot orb */}
-              <div className="relative">
-                <BotOrb />
-                <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-emerald-400 border-[2px] border-[#040412] _ai-ping" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <h2 className="_ai-title text-[15px] font-bold tracking-tight">Haven AI</h2>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 font-semibold">online</span>
               </div>
-
-              <div className="flex-1 min-w-0">
-                <h2 className="_ai-title text-[17px] font-black tracking-tight">Haven AI</h2>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-[10px] text-white/60 font-mono _ai-glass-ui">gemini-2.0-flash</span>
-                  <span className="size-0.5 rounded-full bg-white/30" />
-                  <span className="text-[10px] text-white/60 _ai-glass-ui">Full library access</span>
-                  {ping !== null && (
-                    <>
-                      <span className="size-0.5 rounded-full bg-white/15" />
-                      <span className="text-[10px] text-emerald-400/70 font-mono">{ping}ms</span>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Controls */}
-              <div className="flex items-center gap-1">
-                <button onClick={copyLast} title="Copy last reply"
-                  className="size-7 rounded-lg flex items-center justify-center text-white/30 hover:text-white/70 hover:bg-white/[0.07] transition-all">
-                  <Copy className="size-3.5" />
-                </button>
-                <button onClick={reset} title="Clear conversation"
-                  className="size-7 rounded-lg flex items-center justify-center text-white/30 hover:text-white/70 hover:bg-white/[0.07] transition-all">
-                  <RotateCcw className="size-3.5" />
-                </button>
-                <button
-                  onClick={() => setShowStats(v => !v)}
-                  title="Toggle stats"
-                  className={cn(
-                    "size-7 rounded-lg flex items-center justify-center transition-all",
-                    showStats ? "text-violet-400 bg-violet-500/10" : "text-white/30 hover:text-white/70 hover:bg-white/[0.07]"
-                  )}>
-                  <Activity className="size-3.5" />
-                </button>
-                <button onClick={onClose}
-                  className="size-7 rounded-lg flex items-center justify-center text-white/30 hover:text-red-400/80 hover:bg-red-500/[0.08] transition-all ml-1">
-                  <X className="size-4" />
-                </button>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-[10px] text-white/40 font-mono">gemini-2.0-flash</span>
+                {ping !== null && <><span className="text-white/20">·</span><span className="text-[10px] text-white/40 font-mono">{ping}ms</span></>}
               </div>
             </div>
 
-            {/* Stats bar (collapsible) */}
-            <AnimatePresence>
-              {showStats && lastStats && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden"
-                >
-                  <div className="flex flex-wrap gap-1.5 mt-3 _ai-stats">
-                    <StatsPill
-                      icon={<Cpu className="size-3" />}
-                      label="Model"
-                      value={lastStats.model}
-                      color="bg-violet-500/[0.08] border-violet-500/20 text-violet-300"
-                    />
-                    <StatsPill
-                      icon={<MessageSquare className="size-3" />}
-                      label="In"
-                      value={fmtTokens(lastStats.inputTokens)}
-                      color="bg-indigo-500/[0.08] border-indigo-500/20 text-indigo-300"
-                    />
-                    <StatsPill
-                      icon={<Sparkles className="size-3" />}
-                      label="Out"
-                      value={fmtTokens(lastStats.outputTokens)}
-                      color="bg-cyan-500/[0.08] border-cyan-500/20 text-cyan-300"
-                    />
-                    <StatsPill
-                      icon={<Clock className="size-3" />}
-                      label="Latency"
-                      value={fmtLatency(lastStats.latency)}
-                      color="bg-emerald-500/[0.08] border-emerald-500/20 text-emerald-300"
-                    />
-                    {ping !== null && (
-                      <StatsPill
-                        icon={<Wifi className="size-3" />}
-                        label="Ping"
-                        value={`${ping}ms`}
-                        color="bg-amber-500/[0.08] border-amber-500/20 text-amber-300"
-                      />
-                    )}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <div className="flex items-center gap-0.5">
+              <button onClick={copyLast} title="Copy" className="size-8 rounded-lg flex items-center justify-center text-white/35 hover:text-white/70 hover:bg-white/[0.06] transition-all">
+                <Copy className="size-3.5" />
+              </button>
+              <button onClick={reset} title="Clear" className="size-8 rounded-lg flex items-center justify-center text-white/35 hover:text-white/70 hover:bg-white/[0.06] transition-all">
+                <RotateCcw className="size-3.5" />
+              </button>
+              <button onClick={() => setShowStats(v => !v)} title="Stats"
+                className={cn("size-8 rounded-lg flex items-center justify-center transition-all",
+                  showStats ? "text-violet-400 bg-violet-500/10" : "text-white/35 hover:text-white/70 hover:bg-white/[0.06]")}>
+                <Activity className="size-3.5" />
+              </button>
+              <button onClick={onClose} className="size-8 rounded-lg flex items-center justify-center text-white/35 hover:text-white/75 hover:bg-white/[0.06] transition-all ml-0.5">
+                <X className="size-4" />
+              </button>
+            </div>
           </div>
 
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1 scrollbar-thin scrollbar-thumb-white/[0.06] scrollbar-track-transparent">
-            <AnimatePresence initial={false}>
-              {messages.map(m => (
-                <MsgBubble key={m.id} msg={m} userLetter={userLetter} />
-              ))}
-            </AnimatePresence>
+          {/* Stats strip */}
+          <AnimatePresence>
+            {showStats && lastStats && (
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.18 }} className="overflow-hidden border-b border-white/[0.06]">
+                <div className="flex flex-wrap gap-1.5 px-5 py-2.5 _ai-stats">
+                  <StatsPill icon={<Cpu className="size-3" />} label="Model" value={lastStats.model} color="bg-violet-500/[0.08] border-violet-500/20 text-violet-300" />
+                  <StatsPill icon={<MessageSquare className="size-3" />} label="In" value={fmtTokens(lastStats.inputTokens)} color="bg-indigo-500/[0.08] border-indigo-500/20 text-indigo-300" />
+                  <StatsPill icon={<Sparkles className="size-3" />} label="Out" value={fmtTokens(lastStats.outputTokens)} color="bg-cyan-500/[0.08] border-cyan-500/20 text-cyan-300" />
+                  <StatsPill icon={<Clock className="size-3" />} label="Latency" value={fmtLatency(lastStats.latency)} color="bg-emerald-500/[0.08] border-emerald-500/20 text-emerald-300" />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
+          {/* ── Messages ────────────────────────────────────────── */}
+          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-0.5 scrollbar-thin scrollbar-thumb-white/[0.08] scrollbar-track-transparent">
+            <AnimatePresence initial={false}>
+              {messages.map(m => <MsgBubble key={m.id} msg={m} userLetter={userLetter} />)}
+            </AnimatePresence>
             {thinking && <ThinkingBubble />}
             <div ref={bottomRef} />
           </div>
 
-          {/* Suggestion chips */}
+          {/* ── Suggestion chips ──────────────────────────────── */}
           <AnimatePresence>
             {showSuggestions && (
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 12 }}
-                transition={{ duration: 0.25 }}
-                className="px-4 pb-3"
-              >
-                <p className="text-[9.5px] font-black uppercase tracking-[0.15em] text-white/55 mb-2 _ai-glass-ui">Try asking</p>
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} transition={{ duration: 0.2 }} className="px-5 pb-3">
+                <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/30 mb-2">Try asking</p>
                 <div className="flex flex-wrap gap-1.5">
                   {SUGGESTIONS.map((s, i) => (
-                    <button
-                      key={s.text}
-                      onClick={() => send(s.text)}
-                      className="_ai-sugg _ai-glass-ui flex items-center gap-1.5 text-[11px] bg-white/[0.08] hover:bg-white/[0.15] border border-white/[0.14] hover:border-white/[0.28] text-white/75 hover:text-white rounded-xl px-2.5 py-1.5 transition-all text-left"
-                      style={{ animationDelay: `${i * 45}ms` }}
-                    >
-                      <span className="text-white/20">{s.icon}</span>
-                      {s.text}
+                    <button key={s.text} onClick={() => send(s.text)}
+                      className="_ai-sugg flex items-center gap-1.5 text-[11px] font-medium bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] hover:border-white/[0.2] text-white/60 hover:text-white/90 rounded-lg px-2.5 py-1.5 transition-all"
+                      style={{ animationDelay: `${i * 35}ms` }}>
+                      <span className="opacity-50">{s.icon}</span>{s.text}
                     </button>
                   ))}
                 </div>
@@ -696,69 +557,49 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
             )}
           </AnimatePresence>
 
-          {/* Input */}
-          <div className="shrink-0 p-4 border-t border-white/[0.09]"
-            style={{ background: "rgba(255,255,255,0.04)", borderRadius: "0 0 24px 24px" }}>
-            <div className="flex gap-2.5 items-end">
-              <div className="relative flex-1">
-                <textarea
-                  ref={inputRef}
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
-                    if (e.key === "Escape") onClose();
-                  }}
-                  placeholder="Add a link, delete bookmarks, tag, organize… anything"
-                  rows={1}
-                  disabled={streaming}
-                  className="w-full resize-none min-h-[44px] max-h-[140px] px-4 py-3 rounded-2xl text-[13px] text-white/88 placeholder:text-white/18 outline-none transition-all border disabled:opacity-50"
-                  style={{
-                    background: "rgba(255,255,255,.08)",
-                    borderColor: input ? "rgba(255,255,255,.35)" : "rgba(255,255,255,.14)",
-                    boxShadow: input ? "0 0 0 2px rgba(255,255,255,.06), inset 0 1px 0 rgba(255,255,255,.06)" : "none",
-                    lineHeight: "1.5",
-                  }}
-                  onFocus={e => { (e.target as HTMLTextAreaElement).style.borderColor = "rgba(255,255,255,.38)"; }}
-                  onBlur={e => { (e.target as HTMLTextAreaElement).style.borderColor = input ? "rgba(255,255,255,.35)" : "rgba(255,255,255,.14)"; }}
-                />
-              </div>
+          {/* ── Input ──────────────────────────────────────────── */}
+          <div className="shrink-0 px-4 pb-4 pt-3 border-t border-white/[0.07]">
+            <div className="flex gap-2 items-end">
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+                  if (e.key === "Escape") onClose();
+                }}
+                placeholder="Add a link, delete bookmarks, tag, organize… anything"
+                rows={1}
+                disabled={streaming}
+                className="flex-1 resize-none min-h-[44px] max-h-[120px] px-4 py-3 rounded-xl text-[13px] text-white placeholder:text-white/25 outline-none transition-all border disabled:opacity-40"
+                style={{
+                  background: "rgba(255,255,255,0.06)",
+                  borderColor: "rgba(255,255,255,0.12)",
+                  lineHeight: "1.5",
+                }}
+                onFocus={e => { e.target.style.borderColor = "rgba(139,92,246,0.5)"; e.target.style.background = "rgba(255,255,255,0.08)"; }}
+                onBlur={e => { e.target.style.borderColor = "rgba(255,255,255,0.12)"; e.target.style.background = "rgba(255,255,255,0.06)"; }}
+              />
 
               {streaming ? (
-                <button
-                  onClick={stop}
-                  className="size-11 rounded-2xl flex items-center justify-center shrink-0 transition-all hover:scale-105 active:scale-95"
-                  style={{
-                    background: "linear-gradient(135deg, rgba(239,68,68,.25) 0%, rgba(220,38,38,.15) 100%)",
-                    border: "1px solid rgba(239,68,68,.25)",
-                    boxShadow: "0 4px 12px rgba(239,68,68,.15)",
-                  }}
-                >
+                <button onClick={stop} className="size-11 rounded-xl flex items-center justify-center shrink-0 transition-all hover:scale-105 active:scale-95 border border-red-500/30 bg-red-500/10 hover:bg-red-500/20">
                   <Square className="size-4 text-red-400" />
                 </button>
               ) : (
-                <button
-                  ref={sendBtnRef}
-                  onClick={() => send()}
-                  disabled={!input.trim()}
-                  className="size-11 rounded-2xl flex items-center justify-center shrink-0 transition-all hover:scale-105 active:scale-95 disabled:opacity-30 disabled:scale-100"
-                  style={{
-                    background: "linear-gradient(135deg, #6366f1 0%, #7c3aed 60%, #8b5cf6 100%)",
-                    boxShadow: input.trim() ? "0 6px 20px rgba(99,102,241,.45), 0 2px 6px rgba(0,0,0,.3)" : "none",
-                  }}
-                >
+                <button ref={sendBtnRef} onClick={() => send()} disabled={!input.trim()}
+                  className="size-11 rounded-xl flex items-center justify-center shrink-0 transition-all hover:scale-105 active:scale-95 disabled:opacity-25 disabled:scale-100"
+                  style={{ background: "linear-gradient(135deg,#6366f1,#7c3aed)", boxShadow: input.trim() ? "0 4px 16px rgba(99,102,241,.4)" : "none" }}>
                   <Send className="size-4 text-white" />
                 </button>
               )}
             </div>
 
-            <div className="flex items-center justify-between mt-2.5 px-0.5">
-              <p className="text-[10px] text-white/55 font-mono _ai-glass-ui">⌘J to toggle · Esc to close · Enter to send</p>
+            <div className="flex justify-between items-center mt-2 px-1">
+              <p className="text-[10px] text-white/25 font-mono">⌘J toggle · Esc close · Enter send</p>
               {copied && <span className="text-[10px] text-emerald-400 font-medium">Copied!</span>}
             </div>
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
       </div>
     </>
   );
