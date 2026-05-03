@@ -154,7 +154,7 @@ function ThinkingBubble() {
   return (
     <div className="flex gap-2.5 mb-4 _ai-ml">
       <BotOrb />
-      <div className="bg-white/[0.06] border border-violet-500/15 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-3 shadow-lg">
+      <div className="bg-white/[0.09] border border-white/[0.12] rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-3">
         <span className="text-[11px] text-violet-300/60 font-semibold tracking-wide">Thinking</span>
         <div className="flex items-center gap-1.5">
           <span className="size-[7px] rounded-full bg-violet-400 _ai-d1" />
@@ -217,10 +217,10 @@ function MsgBubble({ msg, userLetter }: { msg: Msg; userLetter: string }) {
         <div className={cn(
           "rounded-2xl px-4 py-2.5 text-[13px] leading-relaxed",
           isUser
-            ? "bg-gradient-to-br from-indigo-600/30 to-violet-600/22 border border-indigo-500/25 text-white rounded-tr-sm shadow-lg shadow-indigo-900/20"
+            ? "bg-indigo-500/[0.22] border border-indigo-400/[0.28] text-white rounded-tr-sm"
             : msg.error
-              ? "bg-red-500/[0.08] border border-red-500/18 text-red-200/85 rounded-tl-sm"
-              : "bg-white/[0.055] border border-white/[0.08] text-white/88 rounded-tl-sm shadow-lg shadow-black/20"
+              ? "bg-red-500/[0.1] border border-red-400/[0.22] text-red-200/90 rounded-tl-sm"
+              : "bg-white/[0.1] border border-white/[0.14] text-white/92 rounded-tl-sm"
         )}>
           {html ? <span dangerouslySetInnerHTML={{ __html: html }} /> : null}
           {msg.streaming && <span className="_ai-cur" />}
@@ -446,13 +446,9 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
         exit={{ opacity: 0 }}
         transition={{ duration: 0.28 }}
         className="fixed inset-0 z-[998] flex items-center justify-center"
-        style={{ background: "rgba(2,2,14,.38)", backdropFilter: "blur(6px)" }}
+        style={{ background: "rgba(0,0,8,.18)", backdropFilter: "blur(3px)" }}
         onClick={onClose}
       >
-        <div className="_ai-bglow absolute pointer-events-none"
-          style={{ width: 700, height: 700, borderRadius: "50%", background: "radial-gradient(circle, rgba(99,102,241,.14) 0%, transparent 65%)", filter: "blur(90px)", top: "15%", left: "20%" }} />
-        <div className="_ai-bglow absolute pointer-events-none"
-          style={{ width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle, rgba(139,92,246,.11) 0%, transparent 65%)", filter: "blur(80px)", bottom: "10%", right: "15%", animationDelay: "2.5s" }} />
       </motion.div>
 
       {/* ── Burst ring (fires once on open) ───────────────────── */}
@@ -499,16 +495,15 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
           width: "min(560px, calc(100vw - 32px))",
           height: "min(720px, calc(100vh - 56px))",
           borderRadius: 24,
-          background: "rgba(6,4,20,0.52)",
-          backdropFilter: "blur(48px) saturate(1.9) brightness(1.08)",
-          WebkitBackdropFilter: "blur(48px) saturate(1.9) brightness(1.08)",
+          background: "rgba(6,4,22,0.14)",
+          backdropFilter: "blur(72px) saturate(2.8) brightness(1.12)",
+          WebkitBackdropFilter: "blur(72px) saturate(2.8) brightness(1.12)",
           boxShadow: [
-            "0 0 0 1px rgba(139,92,246,.28)",
-            "0 0 0 2px rgba(99,102,241,.1)",
-            "0 32px 80px rgba(0,0,0,.72)",
-            "0 12px 40px rgba(99,102,241,.22)",
-            "0 4px 12px rgba(0,0,0,.5)",
-            "inset 0 1px 0 rgba(255,255,255,.09)",
+            "0 0 0 1px rgba(255,255,255,.11)",
+            "0 40px 100px rgba(0,0,0,.55)",
+            "0 8px 32px rgba(0,0,0,.3)",
+            "inset 0 1px 0 rgba(255,255,255,.13)",
+            "inset 0 -1px 0 rgba(255,255,255,.05)",
           ].join(", "),
         }}
         onClick={e => e.stopPropagation()}
@@ -523,7 +518,7 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
           <div className="_ai-ring1 absolute"
             style={{
               inset: -80,
-              background: "conic-gradient(from 0deg, transparent 0%, rgba(99,102,241,.0) 30%, rgba(139,92,246,.5) 48%, rgba(6,182,212,.4) 52%, rgba(99,102,241,.0) 70%, transparent 100%)",
+              background: "conic-gradient(from 0deg, transparent 0%, rgba(255,255,255,.0) 30%, rgba(255,255,255,.35) 48%, rgba(200,180,255,.28) 52%, rgba(255,255,255,.0) 70%, transparent 100%)",
               borderRadius: "50%",
             }} />
         </div>
@@ -536,32 +531,25 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
           <div className="_ai-ring2 absolute"
             style={{
               inset: -80,
-              background: "conic-gradient(from 180deg, transparent 0%, rgba(236,72,153,.0) 35%, rgba(99,102,241,.28) 48%, rgba(139,92,246,.22) 52%, rgba(236,72,153,.0) 65%, transparent 100%)",
+              background: "conic-gradient(from 180deg, transparent 0%, rgba(255,255,255,.0) 35%, rgba(255,255,255,.18) 48%, rgba(220,200,255,.14) 52%, rgba(255,255,255,.0) 65%, transparent 100%)",
               borderRadius: "50%",
             }} />
         </div>
 
-        {/* ── Aurora background ─────────────────────────────── */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 1, borderRadius: 24 }}>
+        {/* ── Subtle edge tint only ─────────────────────────── */}
+        <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 1, borderRadius: 24 }}>
           <div style={{
             position: "absolute", inset: 0, borderRadius: 24,
-            background: "radial-gradient(ellipse at 20% 90%, rgba(99,102,241,.28) 0%, transparent 50%), radial-gradient(ellipse at 85% 8%, rgba(139,92,246,.22) 0%, transparent 45%), radial-gradient(ellipse at 50% 50%, rgba(6,182,212,.07) 0%, transparent 65%), radial-gradient(ellipse at 2% 2%, rgba(236,72,153,.09) 0%, transparent 38%)",
+            background: "radial-gradient(ellipse at 0% 100%, rgba(99,102,241,.1) 0%, transparent 50%), radial-gradient(ellipse at 100% 0%, rgba(139,92,246,.07) 0%, transparent 45%)",
           }} />
-          <div className="_ai-o1 _ai-bgp absolute rounded-full pointer-events-none"
-            style={{ width: 320, height: 320, top: "5%", left: "-12%", background: "radial-gradient(circle, rgba(99,102,241,.2) 0%, transparent 70%)", filter: "blur(50px)" }} />
-          <div className="_ai-o2 _ai-bgp absolute rounded-full pointer-events-none"
-            style={{ width: 280, height: 280, bottom: "10%", right: "-8%", background: "radial-gradient(circle, rgba(139,92,246,.18) 0%, transparent 70%)", filter: "blur(45px)", animationDelay: "2s" }} />
-          <div className="_ai-o3 _ai-bgp absolute rounded-full pointer-events-none"
-            style={{ width: 200, height: 200, top: "45%", right: "20%", background: "radial-gradient(circle, rgba(6,182,212,.1) 0%, transparent 70%)", filter: "blur(40px)", animationDelay: "5s" }} />
-          <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(rgba(255,255,255,.025) 1px, transparent 1px)", backgroundSize: "28px 28px", opacity: .5, borderRadius: 24 }} />
         </div>
 
         {/* ── Content ────────────────────────────────────────── */}
         <div className="relative flex flex-col h-full" style={{ zIndex: 2 }}>
 
           {/* Header */}
-          <div className="shrink-0 px-4 pt-4 pb-3 border-b border-white/[0.07]"
-            style={{ background: "linear-gradient(180deg, rgba(10,8,28,.45) 0%, rgba(6,5,18,.25) 100%)", borderRadius: "24px 24px 0 0" }}>
+          <div className="shrink-0 px-4 pt-4 pb-3 border-b border-white/[0.09]"
+            style={{ background: "rgba(255,255,255,0.04)", borderRadius: "24px 24px 0 0" }}>
             <div className="flex items-center gap-3">
               {/* Bot orb */}
               <div className="relative">
@@ -687,7 +675,7 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
                     <button
                       key={s.text}
                       onClick={() => send(s.text)}
-                      className="_ai-sugg flex items-center gap-1.5 text-[11px] bg-white/[0.04] hover:bg-indigo-500/10 border border-white/[0.07] hover:border-indigo-500/25 text-white/45 hover:text-indigo-300 rounded-xl px-2.5 py-1.5 transition-all text-left"
+                      className="_ai-sugg flex items-center gap-1.5 text-[11px] bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.12] hover:border-white/[0.22] text-white/60 hover:text-white/90 rounded-xl px-2.5 py-1.5 transition-all text-left"
                       style={{ animationDelay: `${i * 45}ms` }}
                     >
                       <span className="text-white/20">{s.icon}</span>
@@ -700,8 +688,8 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
           </AnimatePresence>
 
           {/* Input */}
-          <div className="shrink-0 p-4 border-t border-white/[0.07]"
-            style={{ background: "linear-gradient(0deg, rgba(4,4,18,.5) 0%, rgba(6,5,18,.28) 100%)", borderRadius: "0 0 24px 24px" }}>
+          <div className="shrink-0 p-4 border-t border-white/[0.09]"
+            style={{ background: "rgba(255,255,255,0.04)", borderRadius: "0 0 24px 24px" }}>
             <div className="flex gap-2.5 items-end">
               <div className="relative flex-1">
                 <textarea
@@ -717,13 +705,13 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
                   disabled={streaming}
                   className="w-full resize-none min-h-[44px] max-h-[140px] px-4 py-3 rounded-2xl text-[13px] text-white/88 placeholder:text-white/18 outline-none transition-all border disabled:opacity-50"
                   style={{
-                    background: "rgba(255,255,255,.04)",
-                    borderColor: input ? "rgba(139,92,246,.35)" : "rgba(255,255,255,.08)",
-                    boxShadow: input ? "0 0 0 2px rgba(139,92,246,.08), inset 0 1px 0 rgba(255,255,255,.04)" : "none",
+                    background: "rgba(255,255,255,.08)",
+                    borderColor: input ? "rgba(255,255,255,.35)" : "rgba(255,255,255,.14)",
+                    boxShadow: input ? "0 0 0 2px rgba(255,255,255,.06), inset 0 1px 0 rgba(255,255,255,.06)" : "none",
                     lineHeight: "1.5",
                   }}
-                  onFocus={e => { (e.target as HTMLTextAreaElement).style.borderColor = "rgba(139,92,246,.4)"; }}
-                  onBlur={e => { (e.target as HTMLTextAreaElement).style.borderColor = input ? "rgba(139,92,246,.35)" : "rgba(255,255,255,.08)"; }}
+                  onFocus={e => { (e.target as HTMLTextAreaElement).style.borderColor = "rgba(255,255,255,.38)"; }}
+                  onBlur={e => { (e.target as HTMLTextAreaElement).style.borderColor = input ? "rgba(255,255,255,.35)" : "rgba(255,255,255,.14)"; }}
                 />
               </div>
 
