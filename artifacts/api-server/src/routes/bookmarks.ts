@@ -246,13 +246,19 @@ router.post("/bookmarks/bulk-update", async (req, res): Promise<void> => {
 /* ─── AUTO-SUMMARIZE HELPERS ────────────────────────────── */
 async function scrapeWithJina(url: string): Promise<string> {
   const jinaUrl = `https://r.jina.ai/${url}`;
-  const resp = await fetch(jinaUrl, {
-    headers: { "Accept": "text/plain", "X-No-Cache": "true" },
-    signal: AbortSignal.timeout(15000),
-  });
-  if (!resp.ok) throw new Error(`Jina fetch failed: ${resp.status}`);
-  const text = await resp.text();
-  return text.slice(0, 12000);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30000);
+  try {
+    const resp = await fetch(jinaUrl, {
+      headers: { "Accept": "text/plain", "X-No-Cache": "true", "X-Timeout": "25" },
+      signal: controller.signal,
+    });
+    if (!resp.ok) throw new Error(`Jina fetch failed: ${resp.status}`);
+    const text = await resp.text();
+    return text.slice(0, 12000);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function getActiveAiKey(userId: number): Promise<{ provider: string; key: string; baseUrl?: string; model?: string } | null> {
@@ -353,9 +359,12 @@ router.post("/bookmarks", async (req, res): Promise<void> => {
       try {
         const aiCreds = await getActiveAiKey(userId);
         if (!aiCreds) return;
-        const pageText = await scrapeWithJina(url);
-        if (!pageText || pageText.length < 100) return;
-        const summary = await summarizeText(aiCreds.provider, aiCreds.key, pageText, finalTitle, { baseUrl: aiCreds.baseUrl, model: aiCreds.model });
+        let pageText = "";
+        try { pageText = await scrapeWithJina(url); } catch { /* fall back to title-only */ }
+        const contextForAi = pageText && pageText.length >= 100
+          ? pageText
+          : `URL: ${url}\nTitle: ${finalTitle}\n\n(Page content could not be fetched. Write a helpful note based on the URL and title alone.)`;
+        const summary = await summarizeText(aiCreds.provider, aiCreds.key, contextForAi, finalTitle, { baseUrl: aiCreds.baseUrl, model: aiCreds.model });
         if (!summary) return;
         await db.update(bookmarksTable)
           .set({ note: summary.trim(), updatedAt: new Date() })
@@ -385,9 +394,19 @@ router.post("/bookmarks/:id/summarize", async (req, res): Promise<void> => {
   if (!aiCreds) { res.status(400).json({ error: "No AI provider configured. Please add an API key in Settings." }); return; }
 
   try {
-    const pageText = await scrapeWithJina(bookmark.url);
-    if (!pageText || pageText.length < 100) { res.status(422).json({ error: "Could not fetch page content." }); return; }
-    const summary = await summarizeText(aiCreds.provider, aiCreds.key, pageText, bookmark.title || bookmark.url, { baseUrl: aiCreds.baseUrl, model: aiCreds.model });
+    // Try to scrape page content; fall back to title-only if scraping fails/times out
+    let pageText = "";
+    try {
+      pageText = await scrapeWithJina(bookmark.url);
+    } catch {
+      // Scraping failed — will summarize from title + URL only
+    }
+
+    const contextForAi = pageText && pageText.length >= 100
+      ? pageText
+      : `URL: ${bookmark.url}\nTitle: ${bookmark.title || bookmark.url}\n\n(Page content could not be fetched. Write a helpful note based on the URL and title alone.)`;
+
+    const summary = await summarizeText(aiCreds.provider, aiCreds.key, contextForAi, bookmark.title || bookmark.url, { baseUrl: aiCreds.baseUrl, model: aiCreds.model });
     if (!summary) { res.status(422).json({ error: "AI returned empty summary." }); return; }
     const [updated] = await db.update(bookmarksTable)
       .set({ note: summary.trim(), updatedAt: new Date() })

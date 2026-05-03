@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -159,10 +160,22 @@ export function BookmarkCard({
   const meta = getTypeMeta(bookmark.type);
   const bk = bookmark as any;
   const [summarizing, setSummarizing] = useState(false);
+  const { toast } = useToast();
 
   const handleSummarize = onSummarize ? async () => {
     setSummarizing(true);
-    try { await onSummarize(bookmark.id); } finally { setSummarizing(false); }
+    try {
+      await onSummarize(bookmark.id);
+      toast({ title: "Summary saved", description: "AI note added to your bookmark." });
+    } catch (err: any) {
+      toast({
+        title: "Could not summarize",
+        description: err?.message || "Something went wrong. Try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSummarizing(false);
+    }
   } : undefined;
 
   const domain = (() => { try { return bookmark.domain || new URL(bookmark.url).hostname.replace("www.", ""); } catch { return bookmark.url; } })();

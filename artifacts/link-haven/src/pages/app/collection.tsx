@@ -90,15 +90,22 @@ export default function CollectionPage() {
   const handleSummarize = async (id: number) => {
     const { getAuthToken } = await import("@/lib/auth");
     const BASE = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
-    const resp = await fetch(`${BASE}/api/bookmarks/${id}/summarize`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${getAuthToken()}` },
-    });
-    if (!resp.ok) {
-      const err = await resp.json() as any;
-      throw new Error(err.error || "Summarization failed");
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 120000);
+    try {
+      const resp = await fetch(`${BASE}/api/bookmarks/${id}/summarize`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${getAuthToken()}` },
+        signal: controller.signal,
+      });
+      if (!resp.ok) {
+        const err = await resp.json() as any;
+        throw new Error(err.error || "Summarization failed");
+      }
+      invalidate();
+    } finally {
+      clearTimeout(timer);
     }
-    invalidate();
   };
 
   const toggleSelect = (id: number) => {
