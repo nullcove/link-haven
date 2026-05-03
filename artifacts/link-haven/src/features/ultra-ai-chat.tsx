@@ -455,7 +455,7 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
         exit={{ opacity: 0 }}
         transition={{ duration: 0.22 }}
         className="fixed inset-0 z-[998]"
-        style={{ background: "rgba(0,0,0,0.42)" }}
+        style={{ background: "rgba(0,0,0,0.28)" }}
         onClick={onClose}
       />
 
@@ -472,16 +472,16 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
             height: "min(700px, calc(100vh - 60px))",
             borderRadius: 20,
             overflow: "hidden",
-            background: "rgba(10,8,28,0.72)",
-            backdropFilter: "blur(60px) saturate(1.8)",
-            WebkitBackdropFilter: "blur(60px) saturate(1.8)",
-            border: "1px solid rgba(255,255,255,0.1)",
-            boxShadow: "0 32px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)",
+            background: "transparent",
+            backdropFilter: "blur(48px) saturate(2) brightness(0.9)",
+            WebkitBackdropFilter: "blur(48px) saturate(2) brightness(0.9)",
+            border: "1px solid rgba(255,255,255,0.14)",
+            boxShadow: "0 24px 64px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.1)",
           }}
           onClick={e => e.stopPropagation()}
         >
           {/* ── Header ─────────────────────────────────────────── */}
-          <div className="shrink-0 flex items-center gap-3 px-5 py-4 border-b border-white/[0.07]">
+          <div className="shrink-0 flex items-center gap-3 px-5 py-4 border-b border-white/[0.1]" style={{ background: "rgba(0,0,0,0.22)" }}>
             <div className="relative shrink-0">
               <BotOrb />
               <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-emerald-400 border-2 border-[#0a081c] _ai-ping" />
@@ -558,7 +558,7 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
           </AnimatePresence>
 
           {/* ── Input ──────────────────────────────────────────── */}
-          <div className="shrink-0 px-4 pb-4 pt-3 border-t border-white/[0.07]">
+          <div className="shrink-0 px-4 pb-4 pt-3 border-t border-white/[0.1]" style={{ background: "rgba(0,0,0,0.22)" }}>
             <div className="flex gap-2 items-end">
               <textarea
                 ref={inputRef}
