@@ -26,6 +26,15 @@ function maskKey(key: string): string {
   return key.slice(0, 6) + "..." + key.slice(-4).replace(/./g, "*");
 }
 
+function maskUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    return `${u.protocol}//${u.hostname}${u.port ? `:${u.port}` : ""}`;
+  } catch {
+    return url.slice(0, 40) + (url.length > 40 ? "…" : "");
+  }
+}
+
 async function getOrCreateSettings(userId: number) {
   const [existing] = await db.select().from(userSettingsTable).where(eq(userSettingsTable.userId, userId));
   if (existing) return existing;
@@ -39,6 +48,10 @@ function buildAiKeyStatus(settings: any) {
     const val = settings[field];
     result[field] = { connected: !!val, masked: val ? maskKey(val) : null };
   }
+  result["ollamaBaseUrl"] = {
+    connected: !!settings.ollamaBaseUrl,
+    masked: settings.ollamaBaseUrl ? maskUrl(settings.ollamaBaseUrl) : null,
+  };
   return result;
 }
 
@@ -49,9 +62,9 @@ router.get("/settings", async (req, res): Promise<void> => {
   if (!userId) { res.status(401).json({ error: "Invalid session" }); return; }
 
   const settings = await getOrCreateSettings(userId);
-
   res.json({
     aiKeys: buildAiKeyStatus(settings),
+    ollamaBaseUrl: settings.ollamaBaseUrl || null,
     hasGeminiKey: !!settings.geminiApiKey,
     geminiKeyMasked: settings.geminiApiKey ? maskKey(settings.geminiApiKey) : null,
     theme: settings.theme,
@@ -67,22 +80,22 @@ router.put("/settings", async (req, res): Promise<void> => {
   if (!userId) { res.status(401).json({ error: "Invalid session" }); return; }
 
   await getOrCreateSettings(userId);
-
   const body = req.body;
   const updateData: any = {};
 
   for (const field of AI_KEY_FIELDS) {
     if (body[field] !== undefined) updateData[field] = body[field] || null;
   }
+  if (body.ollamaBaseUrl !== undefined) updateData.ollamaBaseUrl = body.ollamaBaseUrl || null;
   if (body.theme !== undefined) updateData.theme = body.theme;
   if (body.defaultView !== undefined) updateData.defaultView = body.defaultView;
   if (body.language !== undefined) updateData.language = body.language;
 
   await db.update(userSettingsTable).set(updateData).where(eq(userSettingsTable.userId, userId));
   const updated = await getOrCreateSettings(userId);
-
   res.json({
     aiKeys: buildAiKeyStatus(updated),
+    ollamaBaseUrl: updated.ollamaBaseUrl || null,
     hasGeminiKey: !!updated.geminiApiKey,
     geminiKeyMasked: updated.geminiApiKey ? maskKey(updated.geminiApiKey) : null,
     theme: updated.theme,
@@ -101,6 +114,7 @@ router.delete("/settings/ai-key/:provider", async (req, res): Promise<void> => {
     gemini: "geminiApiKey", openai: "openaiApiKey", anthropic: "anthropicApiKey",
     mistral: "mistralApiKey", groq: "groqApiKey", perplexity: "perplexityApiKey",
     cohere: "cohereApiKey", openrouter: "openrouterApiKey", together: "togetherApiKey",
+    ollama: "ollamaBaseUrl",
   };
   const field = fieldMap[req.params.provider];
   if (!field) { res.status(400).json({ error: "Unknown provider" }); return; }

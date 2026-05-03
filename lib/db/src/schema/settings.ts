@@ -13,6 +13,7 @@ export const userSettingsTable = pgTable("user_settings", {
   cohereApiKey: text("cohere_api_key"),
   openrouterApiKey: text("openrouter_api_key"),
   togetherApiKey: text("together_api_key"),
+  ollamaBaseUrl: text("ollama_base_url"),
   theme: text("theme").notNull().default("dark"),
   defaultView: text("default_view").notNull().default("grid"),
   language: text("language").notNull().default("en"),
