@@ -42,6 +42,11 @@ const CHAT_CSS = `
 @keyframes ai-shimmer { 0%{background-position:200% center} 100%{background-position:-200% center} }
 @keyframes ai-bg-pulse { 0%,100%{opacity:.7} 50%{opacity:1} }
 @keyframes ai-suggestion-in { 0%{transform:translateY(10px);opacity:0} 100%{transform:translateY(0);opacity:1} }
+@keyframes ai-ring-spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+@keyframes ai-ring-spin-rev { 0%{transform:rotate(0deg)} 100%{transform:rotate(-360deg)} }
+@keyframes ai-burst { 0%{transform:scale(0.6);opacity:1} 100%{transform:scale(2.2);opacity:0} }
+@keyframes ai-backdrop-glow { 0%,100%{opacity:.45} 50%{opacity:.7} }
+@keyframes ai-border-glow { 0%,100%{opacity:.5} 50%{opacity:1} }
 
 ._ai-d1 { animation: ai-dot-1 1.4s ease-in-out infinite; }
 ._ai-d2 { animation: ai-dot-2 1.4s ease-in-out infinite; }
@@ -58,6 +63,11 @@ const CHAT_CSS = `
 ._ai-send  { animation: ai-send  .32s cubic-bezier(.22,1,.36,1) both; }
 ._ai-bgp   { animation: ai-bg-pulse 6s ease-in-out infinite; }
 ._ai-sugg  { animation: ai-suggestion-in .4s cubic-bezier(.22,1,.36,1) both; }
+._ai-ring1 { animation: ai-ring-spin 4s linear infinite; }
+._ai-ring2 { animation: ai-ring-spin-rev 6s linear infinite; }
+._ai-burst { animation: ai-burst .65s cubic-bezier(.22,1,.36,1) both; }
+._ai-bglow { animation: ai-backdrop-glow 5s ease-in-out infinite; }
+._ai-bdglow { animation: ai-border-glow 3s ease-in-out infinite; }
 
 ._ai-title {
   background: linear-gradient(90deg,#818cf8 0%,#a78bfa 25%,#67e8f9 50%,#a78bfa 75%,#818cf8 100%);
@@ -429,33 +439,108 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
 
   return (
     <>
-      {/* Backdrop */}
+      {/* ── Backdrop ──────────────────────────────────────────── */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.22 }}
-        className="fixed inset-0 z-[998]"
-        style={{ background: "rgba(0,0,0,.65)", backdropFilter: "blur(8px)" }}
+        transition={{ duration: 0.28 }}
+        className="fixed inset-0 z-[998] flex items-center justify-center"
+        style={{ background: "rgba(2,2,14,.82)", backdropFilter: "blur(14px) saturate(1.4)" }}
         onClick={onClose}
+      >
+        {/* animated backdrop glows */}
+        <div className="_ai-bglow absolute pointer-events-none"
+          style={{ width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle, rgba(99,102,241,.18) 0%, transparent 65%)", filter: "blur(80px)", top: "20%", left: "25%" }} />
+        <div className="_ai-bglow absolute pointer-events-none"
+          style={{ width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(139,92,246,.14) 0%, transparent 65%)", filter: "blur(70px)", bottom: "15%", right: "20%", animationDelay: "2.5s" }} />
+      </motion.div>
+
+      {/* ── Burst ring (fires once on open) ───────────────────── */}
+      <motion.div
+        initial={{ opacity: 1, scale: 0.55 }}
+        animate={{ opacity: 0, scale: 2.1 }}
+        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+        className="fixed z-[999] pointer-events-none"
+        style={{
+          top: "50%", left: "50%",
+          width: 520, height: 520,
+          marginTop: -260, marginLeft: -260,
+          borderRadius: "50%",
+          border: "1.5px solid rgba(139,92,246,.55)",
+          boxShadow: "0 0 40px rgba(99,102,241,.3), inset 0 0 40px rgba(139,92,246,.15)",
+        }}
+      />
+      <motion.div
+        initial={{ opacity: 0.7, scale: 0.55 }}
+        animate={{ opacity: 0, scale: 1.75 }}
+        transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1], delay: 0.07 }}
+        className="fixed z-[999] pointer-events-none"
+        style={{
+          top: "50%", left: "50%",
+          width: 520, height: 520,
+          marginTop: -260, marginLeft: -260,
+          borderRadius: "50%",
+          border: "1px solid rgba(99,102,241,.35)",
+        }}
       />
 
-      {/* Panel */}
+      {/* ── Modal ─────────────────────────────────────────────── */}
       <motion.div
-        initial={{ x: "100%", opacity: 0, scale: 0.97 }}
-        animate={{ x: 0, opacity: 1, scale: 1 }}
-        exit={{ x: "100%", opacity: 0, scale: 0.97 }}
-        transition={{ type: "spring", stiffness: 340, damping: 36, mass: 0.9 }}
-        className="fixed right-0 top-0 bottom-0 z-[999] w-full max-w-[500px] flex flex-col overflow-hidden"
+        initial={{ opacity: 0, scale: 0.82, y: 32, filter: "blur(12px)" }}
+        animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
+        exit={{ opacity: 0, scale: 0.86, y: 20, filter: "blur(8px)" }}
+        transition={{ type: "spring" as const, stiffness: 420, damping: 34, mass: 0.85 }}
+        className="fixed z-[1000] flex flex-col overflow-hidden"
         style={{
-          boxShadow: "-8px 0 60px rgba(0,0,0,.6), -2px 0 20px rgba(99,102,241,.08)",
+          top: "50%", left: "50%",
+          transform: "translate(-50%,-50%)",
+          width: "min(560px, calc(100vw - 32px))",
+          height: "min(720px, calc(100vh - 56px))",
+          borderRadius: 24,
+          boxShadow: [
+            "0 0 0 1px rgba(139,92,246,.22)",
+            "0 0 0 2px rgba(99,102,241,.08)",
+            "0 32px 80px rgba(0,0,0,.75)",
+            "0 12px 40px rgba(99,102,241,.18)",
+            "0 4px 12px rgba(0,0,0,.6)",
+            "inset 0 1px 0 rgba(255,255,255,.06)",
+          ].join(", "),
         }}
         onClick={e => e.stopPropagation()}
       >
+        {/* spinning glow ring outer */}
+        <div className="absolute pointer-events-none"
+          style={{
+            inset: -2, borderRadius: 26, zIndex: 0,
+            background: "transparent",
+            overflow: "hidden",
+          }}>
+          <div className="_ai-ring1 absolute"
+            style={{
+              inset: -80,
+              background: "conic-gradient(from 0deg, transparent 0%, rgba(99,102,241,.0) 30%, rgba(139,92,246,.5) 48%, rgba(6,182,212,.4) 52%, rgba(99,102,241,.0) 70%, transparent 100%)",
+              borderRadius: "50%",
+            }} />
+        </div>
+        {/* spinning glow ring inner (reverse, slower) */}
+        <div className="absolute pointer-events-none"
+          style={{
+            inset: -1, borderRadius: 25, zIndex: 0,
+            overflow: "hidden",
+          }}>
+          <div className="_ai-ring2 absolute"
+            style={{
+              inset: -80,
+              background: "conic-gradient(from 180deg, transparent 0%, rgba(236,72,153,.0) 35%, rgba(99,102,241,.28) 48%, rgba(139,92,246,.22) 52%, rgba(236,72,153,.0) 65%, transparent 100%)",
+              borderRadius: "50%",
+            }} />
+        </div>
+
         {/* ── Aurora background ─────────────────────────────── */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 0 }}>
+        <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 1, borderRadius: 24 }}>
           <div style={{
-            position: "absolute", inset: 0,
+            position: "absolute", inset: 0, borderRadius: 24,
             background: "radial-gradient(ellipse at 20% 90%, rgba(99,102,241,.22) 0%, transparent 50%), radial-gradient(ellipse at 85% 8%, rgba(139,92,246,.18) 0%, transparent 45%), radial-gradient(ellipse at 50% 50%, rgba(6,182,212,.05) 0%, transparent 65%), radial-gradient(ellipse at 2% 2%, rgba(236,72,153,.07) 0%, transparent 38%), #040412",
           }} />
           <div className="_ai-o1 _ai-bgp absolute rounded-full pointer-events-none"
@@ -464,16 +549,15 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
             style={{ width: 280, height: 280, bottom: "10%", right: "-8%", background: "radial-gradient(circle, rgba(139,92,246,.18) 0%, transparent 70%)", filter: "blur(45px)", animationDelay: "2s" }} />
           <div className="_ai-o3 _ai-bgp absolute rounded-full pointer-events-none"
             style={{ width: 200, height: 200, top: "45%", right: "20%", background: "radial-gradient(circle, rgba(6,182,212,.1) 0%, transparent 70%)", filter: "blur(40px)", animationDelay: "5s" }} />
-          {/* Subtle grid texture */}
-          <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(rgba(255,255,255,.025) 1px, transparent 1px)", backgroundSize: "28px 28px", opacity: .5 }} />
+          <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(rgba(255,255,255,.025) 1px, transparent 1px)", backgroundSize: "28px 28px", opacity: .5, borderRadius: 24 }} />
         </div>
 
-        {/* ── Content (above background) ─────────────────── */}
-        <div className="relative flex flex-col h-full" style={{ zIndex: 1 }}>
+        {/* ── Content ────────────────────────────────────────── */}
+        <div className="relative flex flex-col h-full" style={{ zIndex: 2 }}>
 
           {/* Header */}
           <div className="shrink-0 px-4 pt-4 pb-3 border-b border-white/[0.07]"
-            style={{ background: "linear-gradient(180deg, rgba(10,8,28,.85) 0%, rgba(6,5,18,.7) 100%)", backdropFilter: "blur(20px)" }}>
+            style={{ background: "linear-gradient(180deg, rgba(10,8,28,.9) 0%, rgba(6,5,18,.75) 100%)", backdropFilter: "blur(20px)", borderRadius: "24px 24px 0 0" }}>
             <div className="flex items-center gap-3">
               {/* Bot orb */}
               <div className="relative">
@@ -516,7 +600,7 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
                   <Activity className="size-3.5" />
                 </button>
                 <button onClick={onClose}
-                  className="size-7 rounded-lg flex items-center justify-center text-white/30 hover:text-white/70 hover:bg-white/[0.07] transition-all ml-1">
+                  className="size-7 rounded-lg flex items-center justify-center text-white/30 hover:text-red-400/80 hover:bg-red-500/[0.08] transition-all ml-1">
                   <X className="size-4" />
                 </button>
               </div>
@@ -613,7 +697,7 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
 
           {/* Input */}
           <div className="shrink-0 p-4 border-t border-white/[0.07]"
-            style={{ background: "linear-gradient(0deg, rgba(4,4,18,.95) 0%, rgba(6,5,18,.75) 100%)", backdropFilter: "blur(20px)" }}>
+            style={{ background: "linear-gradient(0deg, rgba(4,4,18,.98) 0%, rgba(6,5,18,.8) 100%)", backdropFilter: "blur(20px)", borderRadius: "0 0 24px 24px" }}>
             <div className="flex gap-2.5 items-end">
               <div className="relative flex-1">
                 <textarea
@@ -622,6 +706,7 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={e => {
                     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+                    if (e.key === "Escape") onClose();
                   }}
                   placeholder="Add a link, delete bookmarks, tag, organize… anything"
                   rows={1}
@@ -667,7 +752,7 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
             </div>
 
             <div className="flex items-center justify-between mt-2.5 px-0.5">
-              <p className="text-[10px] text-white/15 font-mono">⌘J to open · Enter to send · Shift+Enter newline</p>
+              <p className="text-[10px] text-white/15 font-mono">⌘J to toggle · Esc to close · Enter to send</p>
               {copied && <span className="text-[10px] text-emerald-400 font-medium">Copied!</span>}
             </div>
           </div>
