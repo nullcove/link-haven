@@ -14,7 +14,7 @@ import {
 import {
   Bookmark, Hash, LogOut, Settings, Star, Archive,
   FolderPlus, ChevronDown, ChevronRight, BarChart3,
-  Brain, Pin, Clock, Globe, Sparkles,
+  Brain, Pin, Clock, Globe, Sparkles, Bot,
 } from "lucide-react";
 import { clearAuthToken } from "@/lib/auth";
 import { useState } from "react";
@@ -229,6 +229,13 @@ export function AppSidebar({ user, onOpenGemini }: AppSidebarProps) {
           </div>
         </div>
         <SidebarMenu className="gap-0.5">
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={location === "/ai-settings"} className="rounded-lg h-8 px-2 text-[13px]">
+              <Link href="/ai-settings" className="flex items-center gap-2.5">
+                <Bot className="size-3.5 shrink-0 text-indigo-400" /><span className="text-indigo-300/80">AI Models</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={location === "/settings"} className="rounded-lg h-8 px-2 text-[13px]">
               <Link href="/settings" className="flex items-center gap-2.5">

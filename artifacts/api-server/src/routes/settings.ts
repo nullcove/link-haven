@@ -4,6 +4,11 @@ import { eq } from "drizzle-orm";
 
 const router: IRouter = Router();
 
+const AI_KEY_FIELDS = [
+  "geminiApiKey", "openaiApiKey", "anthropicApiKey", "mistralApiKey",
+  "groqApiKey", "perplexityApiKey", "cohereApiKey", "openrouterApiKey", "togetherApiKey",
+] as const;
+
 async function getUserFromToken(token: string): Promise<number | null> {
   const [session] = await db.select().from(sessionsTable).where(eq(sessionsTable.token, token));
   if (!session || session.expiresAt < new Date()) return null;
@@ -28,6 +33,15 @@ async function getOrCreateSettings(userId: number) {
   return created;
 }
 
+function buildAiKeyStatus(settings: any) {
+  const result: Record<string, { connected: boolean; masked: string | null }> = {};
+  for (const field of AI_KEY_FIELDS) {
+    const val = settings[field];
+    result[field] = { connected: !!val, masked: val ? maskKey(val) : null };
+  }
+  return result;
+}
+
 router.get("/settings", async (req, res): Promise<void> => {
   const token = getToken(req);
   if (!token) { res.status(401).json({ error: "Not authenticated" }); return; }
@@ -37,6 +51,7 @@ router.get("/settings", async (req, res): Promise<void> => {
   const settings = await getOrCreateSettings(userId);
 
   res.json({
+    aiKeys: buildAiKeyStatus(settings),
     hasGeminiKey: !!settings.geminiApiKey,
     geminiKeyMasked: settings.geminiApiKey ? maskKey(settings.geminiApiKey) : null,
     theme: settings.theme,
@@ -51,20 +66,23 @@ router.put("/settings", async (req, res): Promise<void> => {
   const userId = await getUserFromToken(token);
   if (!userId) { res.status(401).json({ error: "Invalid session" }); return; }
 
-  const { geminiApiKey, theme, defaultView, language } = req.body;
+  await getOrCreateSettings(userId);
 
-  const settings = await getOrCreateSettings(userId);
-
+  const body = req.body;
   const updateData: any = {};
-  if (geminiApiKey !== undefined) updateData.geminiApiKey = geminiApiKey || null;
-  if (theme !== undefined) updateData.theme = theme;
-  if (defaultView !== undefined) updateData.defaultView = defaultView;
-  if (language !== undefined) updateData.language = language;
+
+  for (const field of AI_KEY_FIELDS) {
+    if (body[field] !== undefined) updateData[field] = body[field] || null;
+  }
+  if (body.theme !== undefined) updateData.theme = body.theme;
+  if (body.defaultView !== undefined) updateData.defaultView = body.defaultView;
+  if (body.language !== undefined) updateData.language = body.language;
 
   await db.update(userSettingsTable).set(updateData).where(eq(userSettingsTable.userId, userId));
-
   const updated = await getOrCreateSettings(userId);
+
   res.json({
+    aiKeys: buildAiKeyStatus(updated),
     hasGeminiKey: !!updated.geminiApiKey,
     geminiKeyMasked: updated.geminiApiKey ? maskKey(updated.geminiApiKey) : null,
     theme: updated.theme,
@@ -73,16 +91,30 @@ router.put("/settings", async (req, res): Promise<void> => {
   });
 });
 
-router.delete("/settings/gemini-key", async (req, res): Promise<void> => {
+router.delete("/settings/ai-key/:provider", async (req, res): Promise<void> => {
   const token = getToken(req);
   if (!token) { res.status(401).json({ error: "Not authenticated" }); return; }
   const userId = await getUserFromToken(token);
   if (!userId) { res.status(401).json({ error: "Invalid session" }); return; }
 
-  await db.update(userSettingsTable)
-    .set({ geminiApiKey: null })
-    .where(eq(userSettingsTable.userId, userId));
+  const fieldMap: Record<string, string> = {
+    gemini: "geminiApiKey", openai: "openaiApiKey", anthropic: "anthropicApiKey",
+    mistral: "mistralApiKey", groq: "groqApiKey", perplexity: "perplexityApiKey",
+    cohere: "cohereApiKey", openrouter: "openrouterApiKey", together: "togetherApiKey",
+  };
+  const field = fieldMap[req.params.provider];
+  if (!field) { res.status(400).json({ error: "Unknown provider" }); return; }
 
+  await db.update(userSettingsTable).set({ [field]: null } as any).where(eq(userSettingsTable.userId, userId));
+  res.json({ success: true });
+});
+
+router.delete("/settings/gemini-key", async (req, res): Promise<void> => {
+  const token = getToken(req);
+  if (!token) { res.status(401).json({ error: "Not authenticated" }); return; }
+  const userId = await getUserFromToken(token);
+  if (!userId) { res.status(401).json({ error: "Invalid session" }); return; }
+  await db.update(userSettingsTable).set({ geminiApiKey: null }).where(eq(userSettingsTable.userId, userId));
   res.json({ success: true });
 });
 
