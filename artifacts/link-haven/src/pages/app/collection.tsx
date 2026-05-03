@@ -247,6 +247,7 @@ export default function CollectionPage() {
         open={!!selectedBookmark}
         onOpenChange={o => !o && setSelectedBookmark(null)}
         onDelete={handleDelete}
+        onUpdate={invalidate}
       />
       <AddBookmarkDialog open={isAddOpen} onOpenChange={setIsAddOpen} />
 

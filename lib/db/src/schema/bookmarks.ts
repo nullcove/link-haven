@@ -23,6 +23,20 @@ export const bookmarksTable = pgTable("bookmarks", {
   highlight: text("highlight"),
   readingTime: integer("reading_time"),
   summary: text("summary"),
+  // AI-enriched metadata
+  author: text("author"),
+  publishedAt: timestamp("published_at", { withTimezone: true }),
+  wordCount: integer("word_count"),
+  language: text("language"),
+  topics: text("topics").array().notNull().default([]),
+  keyPoints: text("key_points"),
+  sentiment: text("sentiment"),
+  // Link health
+  linkStatus: integer("link_status"),
+  lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
+  // Visit tracking
+  visitCount: integer("visit_count").notNull().default(0),
+  lastVisitedAt: timestamp("last_visited_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
