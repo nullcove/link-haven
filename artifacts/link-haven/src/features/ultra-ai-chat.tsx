@@ -485,26 +485,29 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
         }}
       />
 
-      {/* ── Modal ─────────────────────────────────────────────── */}
+      {/* ── Modal wrapper — flex-center so Framer transform doesn't fight CSS translate ── */}
+      <div
+        className="fixed inset-0 z-[1000] flex items-center justify-center pointer-events-none"
+        style={{ padding: "16px" }}
+      >
       <motion.div
-        initial={{ opacity: 0, scale: 0.82, y: 32, filter: "blur(12px)" }}
+        initial={{ opacity: 0, scale: 0.82, y: 36, filter: "blur(14px)" }}
         animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
-        exit={{ opacity: 0, scale: 0.86, y: 20, filter: "blur(8px)" }}
-        transition={{ type: "spring" as const, stiffness: 420, damping: 34, mass: 0.85 }}
-        className="fixed z-[1000] flex flex-col overflow-hidden"
+        exit={{ opacity: 0, scale: 0.88, y: 18, filter: "blur(10px)" }}
+        transition={{ type: "spring" as const, stiffness: 400, damping: 32, mass: 0.88 }}
+        className="flex flex-col overflow-hidden pointer-events-auto"
         style={{
-          top: "50%", left: "50%",
-          transform: "translate(-50%,-50%)",
           width: "min(560px, calc(100vw - 32px))",
           height: "min(720px, calc(100vh - 56px))",
           borderRadius: 24,
+          background: "transparent",
           boxShadow: [
-            "0 0 0 1px rgba(139,92,246,.22)",
-            "0 0 0 2px rgba(99,102,241,.08)",
-            "0 32px 80px rgba(0,0,0,.75)",
-            "0 12px 40px rgba(99,102,241,.18)",
-            "0 4px 12px rgba(0,0,0,.6)",
-            "inset 0 1px 0 rgba(255,255,255,.06)",
+            "0 0 0 1px rgba(139,92,246,.25)",
+            "0 0 0 2px rgba(99,102,241,.09)",
+            "0 32px 80px rgba(0,0,0,.78)",
+            "0 12px 40px rgba(99,102,241,.2)",
+            "0 4px 12px rgba(0,0,0,.65)",
+            "inset 0 1px 0 rgba(255,255,255,.07)",
           ].join(", "),
         }}
         onClick={e => e.stopPropagation()}
@@ -758,6 +761,7 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
           </div>
         </div>
       </motion.div>
+      </div>
     </>
   );
 }
