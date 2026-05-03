@@ -446,14 +446,13 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
         exit={{ opacity: 0 }}
         transition={{ duration: 0.28 }}
         className="fixed inset-0 z-[998] flex items-center justify-center"
-        style={{ background: "rgba(2,2,14,.82)", backdropFilter: "blur(14px) saturate(1.4)" }}
+        style={{ background: "rgba(2,2,14,.38)", backdropFilter: "blur(6px)" }}
         onClick={onClose}
       >
-        {/* animated backdrop glows */}
         <div className="_ai-bglow absolute pointer-events-none"
-          style={{ width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle, rgba(99,102,241,.18) 0%, transparent 65%)", filter: "blur(80px)", top: "20%", left: "25%" }} />
+          style={{ width: 700, height: 700, borderRadius: "50%", background: "radial-gradient(circle, rgba(99,102,241,.14) 0%, transparent 65%)", filter: "blur(90px)", top: "15%", left: "20%" }} />
         <div className="_ai-bglow absolute pointer-events-none"
-          style={{ width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(139,92,246,.14) 0%, transparent 65%)", filter: "blur(70px)", bottom: "15%", right: "20%", animationDelay: "2.5s" }} />
+          style={{ width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle, rgba(139,92,246,.11) 0%, transparent 65%)", filter: "blur(80px)", bottom: "10%", right: "15%", animationDelay: "2.5s" }} />
       </motion.div>
 
       {/* ── Burst ring (fires once on open) ───────────────────── */}
