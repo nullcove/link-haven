@@ -199,12 +199,31 @@ interface UltraAiChatProps {
   onRefresh?: () => void;
 }
 
-export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiChatProps) {
-  const [messages, setMessages] = useState<Msg[]>([{
+const CHAT_MSGS_KEY = "lh_ai_chat_msgs";
+const CHAT_HIST_KEY = "lh_ai_chat_hist";
+
+function loadPersistedMsgs(): Msg[] {
+  try {
+    const raw = localStorage.getItem(CHAT_MSGS_KEY);
+    if (raw) { const parsed = JSON.parse(raw); if (Array.isArray(parsed) && parsed.length) return parsed; }
+  } catch { /* ignore */ }
+  return [{
     id: genId(),
     role: "assistant",
     text: "Hello! I'm **Haven AI** — your full-power bookmark assistant.\n\nI can **add**, **delete**, **tag**, **organize**, and **analyze** every bookmark in your library. Just tell me what to do in plain English, and I'll execute it instantly.\n\nWhat would you like to do?",
-  }]);
+  }];
+}
+
+function loadPersistedHistory(): Array<{ role: string; parts: Array<{ text: string }> }> {
+  try {
+    const raw = localStorage.getItem(CHAT_HIST_KEY);
+    if (raw) { const parsed = JSON.parse(raw); if (Array.isArray(parsed)) return parsed; }
+  } catch { /* ignore */ }
+  return [];
+}
+
+export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiChatProps) {
+  const [messages, setMessages] = useState<Msg[]>(loadPersistedMsgs);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [thinking, setThinking] = useState(false);
@@ -220,8 +239,13 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const sendBtnRef = useRef<HTMLButtonElement>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const historyRef = useRef<Array<{ role: string; parts: Array<{ text: string }> }>>([]);
+  const historyRef = useRef<Array<{ role: string; parts: Array<{ text: string }> }>>(loadPersistedHistory());
   const queryClient = useQueryClient();
+
+  // Persist messages to localStorage whenever they change
+  useEffect(() => {
+    try { localStorage.setItem(CHAT_MSGS_KEY, JSON.stringify(messages)); } catch { /* ignore */ }
+  }, [messages]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -329,6 +353,7 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
                   { role: "user", parts: [{ text: msg }] },
                   { role: "model", parts: [{ text: fullText }] },
                 ];
+                try { localStorage.setItem(CHAT_HIST_KEY, JSON.stringify(historyRef.current)); } catch { /* ignore */ }
               } else if (eventType === "error") {
                 setMessages(prev => prev.map(m => m.id === asstMsgId
                   ? { ...m, streaming: false, text: data.error || "An error occurred", error: true }
@@ -376,6 +401,7 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
 
   const reset = () => {
     historyRef.current = [];
+    try { localStorage.removeItem(CHAT_MSGS_KEY); localStorage.removeItem(CHAT_HIST_KEY); } catch { /* ignore */ }
     setMessages([{
       id: genId(),
       role: "assistant",

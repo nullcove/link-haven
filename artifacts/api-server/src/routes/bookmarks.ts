@@ -255,16 +255,29 @@ async function scrapeWithJina(url: string): Promise<string> {
   return text.slice(0, 12000);
 }
 
-async function getActiveAiKey(userId: number): Promise<{ provider: string; key: string } | null> {
+async function getActiveAiKey(userId: number): Promise<{ provider: string; key: string; baseUrl?: string; model?: string } | null> {
   const [s] = await db.select().from(userSettingsTable).where(eq(userSettingsTable.userId, userId));
   if (!s) return null;
-  if (s.geminiApiKey) return { provider: "gemini", key: s.geminiApiKey };
-  if ((s as any).openaiApiKey) return { provider: "openai", key: (s as any).openaiApiKey };
-  if ((s as any).openrouterApiKey) return { provider: "openrouter", key: (s as any).openrouterApiKey };
+  if (s.geminiApiKey)               return { provider: "gemini",      key: s.geminiApiKey };
+  if ((s as any).openaiApiKey)      return { provider: "openai",      key: (s as any).openaiApiKey,      baseUrl: "https://api.openai.com/v1",           model: "gpt-4o-mini" };
+  if ((s as any).openrouterApiKey)  return { provider: "openrouter",  key: (s as any).openrouterApiKey,  baseUrl: "https://openrouter.ai/api/v1",         model: "openai/gpt-4o-mini" };
+  if ((s as any).groqApiKey)        return { provider: "groq",        key: (s as any).groqApiKey,        baseUrl: "https://api.groq.com/openai/v1",       model: "llama-3.3-70b-versatile" };
+  if ((s as any).mistralApiKey)     return { provider: "mistral",     key: (s as any).mistralApiKey,     baseUrl: "https://api.mistral.ai/v1",            model: "mistral-medium" };
+  if ((s as any).togetherApiKey)    return { provider: "together",    key: (s as any).togetherApiKey,    baseUrl: "https://api.together.xyz/v1",          model: "meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo" };
+  if ((s as any).cohereApiKey)      return { provider: "cohere",      key: (s as any).cohereApiKey,      baseUrl: "https://api.cohere.ai/compatibility/v1", model: "command-r-plus" };
+  if (s.ollamaBaseUrl) {
+    const baseUrl = s.ollamaBaseUrl.replace(/\/$/, "");
+    try {
+      const r = await fetch(`${baseUrl}/api/tags`, { signal: AbortSignal.timeout(5000) });
+      const j = await r.json() as any;
+      const model = j?.models?.[0]?.name || "llama3";
+      return { provider: "ollama", key: "", baseUrl, model };
+    } catch { return { provider: "ollama", key: "", baseUrl, model: "llama3" }; }
+  }
   return null;
 }
 
-async function summarizeText(provider: string, key: string, pageText: string, pageTitle: string): Promise<string> {
+async function summarizeText(provider: string, key: string, pageText: string, pageTitle: string, opts?: { baseUrl?: string; model?: string }): Promise<string> {
   const prompt = `You are a smart bookmark note-taker. Given the following web page content, write a concise, well-structured summary note in 3-5 sentences. Focus on: what the page is about, key points, and why it might be useful to save. Be clear and informative. Page title: "${pageTitle}"\n\nContent:\n${pageText}`;
 
   if (provider === "gemini") {
@@ -274,28 +287,39 @@ async function summarizeText(provider: string, key: string, pageText: string, pa
     };
     const resp = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
-      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(20000) }
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(30000) }
     );
     const data = await resp.json() as any;
     if (!resp.ok) throw new Error(data?.error?.message || "Gemini error");
     return data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
   }
 
-  if (provider === "openai" || provider === "openrouter") {
-    const baseUrl = provider === "openrouter" ? "https://openrouter.ai/api/v1" : "https://api.openai.com/v1";
-    const model = provider === "openrouter" ? "openai/gpt-4o-mini" : "gpt-4o-mini";
-    const resp = await fetch(`${baseUrl}/chat/completions`, {
+  if (provider === "ollama") {
+    const baseUrl = (opts?.baseUrl || "http://localhost:11434").replace(/\/$/, "");
+    const model = opts?.model || "llama3";
+    const resp = await fetch(`${baseUrl}/api/generate`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-      body: JSON.stringify({ model, messages: [{ role: "user", content: prompt }], max_tokens: 512, temperature: 0.5 }),
-      signal: AbortSignal.timeout(20000),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model, prompt, stream: false }),
+      signal: AbortSignal.timeout(60000),
     });
     const data = await resp.json() as any;
-    if (!resp.ok) throw new Error(data?.error?.message || "OpenAI error");
-    return data?.choices?.[0]?.message?.content ?? "";
+    if (!resp.ok) throw new Error(data?.error || "Ollama error");
+    return data?.response ?? "";
   }
 
-  return "";
+  // OpenAI-compatible providers: openai, openrouter, groq, mistral, together, cohere
+  const baseUrl = opts?.baseUrl || "https://api.openai.com/v1";
+  const model = opts?.model || "gpt-4o-mini";
+  const resp = await fetch(`${baseUrl}/chat/completions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+    body: JSON.stringify({ model, messages: [{ role: "user", content: prompt }], max_tokens: 512, temperature: 0.5 }),
+    signal: AbortSignal.timeout(30000),
+  });
+  const data = await resp.json() as any;
+  if (!resp.ok) throw new Error(data?.error?.message || "AI provider error");
+  return data?.choices?.[0]?.message?.content ?? "";
 }
 
 /* ─── CREATE ────────────────────────────────────────────── */
@@ -331,7 +355,7 @@ router.post("/bookmarks", async (req, res): Promise<void> => {
         if (!aiCreds) return;
         const pageText = await scrapeWithJina(url);
         if (!pageText || pageText.length < 100) return;
-        const summary = await summarizeText(aiCreds.provider, aiCreds.key, pageText, finalTitle);
+        const summary = await summarizeText(aiCreds.provider, aiCreds.key, pageText, finalTitle, { baseUrl: aiCreds.baseUrl, model: aiCreds.model });
         if (!summary) return;
         await db.update(bookmarksTable)
           .set({ note: summary.trim(), updatedAt: new Date() })
@@ -340,6 +364,38 @@ router.post("/bookmarks", async (req, res): Promise<void> => {
         // silent fail — summary is best-effort
       }
     })();
+  }
+});
+
+/* ─── MANUAL SUMMARIZE ──────────────────────────────────── */
+router.post("/bookmarks/:id/summarize", async (req, res): Promise<void> => {
+  const token = getToken(req);
+  if (!token) { res.status(401).json({ error: "Not authenticated" }); return; }
+  const userId = await getUserFromToken(token);
+  if (!userId) { res.status(401).json({ error: "Invalid session" }); return; }
+
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid bookmark id" }); return; }
+
+  const [bookmark] = await db.select().from(bookmarksTable)
+    .where(and(eq(bookmarksTable.id, id), eq(bookmarksTable.userId, userId)));
+  if (!bookmark) { res.status(404).json({ error: "Bookmark not found" }); return; }
+
+  const aiCreds = await getActiveAiKey(userId);
+  if (!aiCreds) { res.status(400).json({ error: "No AI provider configured. Please add an API key in Settings." }); return; }
+
+  try {
+    const pageText = await scrapeWithJina(bookmark.url);
+    if (!pageText || pageText.length < 100) { res.status(422).json({ error: "Could not fetch page content." }); return; }
+    const summary = await summarizeText(aiCreds.provider, aiCreds.key, pageText, bookmark.title || bookmark.url, { baseUrl: aiCreds.baseUrl, model: aiCreds.model });
+    if (!summary) { res.status(422).json({ error: "AI returned empty summary." }); return; }
+    const [updated] = await db.update(bookmarksTable)
+      .set({ note: summary.trim(), updatedAt: new Date() })
+      .where(eq(bookmarksTable.id, id))
+      .returning();
+    res.json(await withCollectionName(updated));
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "Summarization failed." });
   }
 });
 

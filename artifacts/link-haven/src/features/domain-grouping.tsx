@@ -9,13 +9,14 @@ interface DomainGroupingProps {
   onDelete: (id: number) => void;
   onFavorite: (id: number) => void;
   onArchive: (id: number) => void;
+  onSummarize?: (id: number) => Promise<void>;
   selectedIds?: Set<number>;
   onToggleSelect?: (id: number) => void;
   selectMode?: boolean;
 }
 
 export function DomainGrouping({
-  bookmarks, onSelect, onDelete, onFavorite, onArchive,
+  bookmarks, onSelect, onDelete, onFavorite, onArchive, onSummarize,
   selectedIds, onToggleSelect, selectMode,
 }: DomainGroupingProps) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
@@ -65,6 +66,7 @@ export function DomainGrouping({
                     onDelete={onDelete}
                     onFavorite={onFavorite}
                     onArchive={onArchive}
+                    onSummarize={onSummarize}
                     isSelected={selectedIds?.has(b.id)}
                     onToggleSelect={onToggleSelect}
                     selectMode={selectMode}

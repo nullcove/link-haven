@@ -87,6 +87,20 @@ export default function CollectionPage() {
     invalidate();
   };
 
+  const handleSummarize = async (id: number) => {
+    const { getAuthToken } = await import("@/lib/auth");
+    const BASE = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
+    const resp = await fetch(`${BASE}/api/bookmarks/${id}/summarize`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${getAuthToken()}` },
+    });
+    if (!resp.ok) {
+      const err = await resp.json() as any;
+      throw new Error(err.error || "Summarization failed");
+    }
+    invalidate();
+  };
+
   const toggleSelect = (id: number) => {
     setSelectedIds(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   };
@@ -211,6 +225,7 @@ export default function CollectionPage() {
                 onArchive={async (id) => { await archiveMutation.mutateAsync({ id }); invalidate(); }}
                 onDelete={handleDelete}
                 onPin={handlePin}
+                onSummarize={handleSummarize}
                 isSelected={selectedIds.has(bookmark.id)}
                 onToggleSelect={toggleSelect}
                 selectMode={selectMode}

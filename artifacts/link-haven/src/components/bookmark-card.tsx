@@ -3,9 +3,10 @@ import { formatDistanceToNow } from "date-fns";
 import {
   Link2, Image as ImageIcon, FileText, File, Video,
   Star, MoreHorizontal, Trash2, Archive, ExternalLink, Globe,
-  Pin, StickyNote, Clock, Highlighter, Music,
+  Pin, StickyNote, Clock, Highlighter, Music, Sparkles, Loader2,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useState } from "react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -81,8 +82,9 @@ function ActionBtn({ onClick, title, active, activeColor = "text-amber-400", chi
 }
 
 /* ─── More menu ───────────────────────────────────────────── */
-function MoreMenu({ bookmark, onToggleArchive, onDelete, onPin }: {
+function MoreMenu({ bookmark, onToggleArchive, onDelete, onPin, onSummarize, summarizing }: {
   bookmark: any; onToggleArchive?: () => void; onDelete: () => void; onPin?: () => void;
+  onSummarize?: () => void; summarizing?: boolean;
 }) {
   return (
     <DropdownMenu>
@@ -91,7 +93,7 @@ function MoreMenu({ bookmark, onToggleArchive, onDelete, onPin }: {
           <MoreHorizontal className="size-3.5" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-44 border shadow-2xl rounded-xl p-1"
+      <DropdownMenuContent align="end" className="w-48 border shadow-2xl rounded-xl p-1"
         style={{ background: "#111118", borderColor: "rgba(255,255,255,.09)" }}>
         <DropdownMenuItem onClick={e => { e.stopPropagation(); window.open(bookmark.url, "_blank"); }}
           className="text-xs text-white/55 hover:text-white rounded-lg cursor-pointer flex items-center gap-2">
@@ -99,6 +101,15 @@ function MoreMenu({ bookmark, onToggleArchive, onDelete, onPin }: {
             <ExternalLink className="size-3 text-indigo-400" />
           </span>Open link
         </DropdownMenuItem>
+        {onSummarize && (
+          <DropdownMenuItem onClick={e => { e.stopPropagation(); if (!summarizing) onSummarize(); }}
+            className="text-xs text-white/55 hover:text-white rounded-lg cursor-pointer flex items-center gap-2"
+            disabled={summarizing}>
+            <span className="size-5 rounded-md flex items-center justify-center" style={{ background: "rgba(139,92,246,.2)", border: "1px solid rgba(139,92,246,.25)" }}>
+              {summarizing ? <Loader2 className="size-3 text-violet-400 animate-spin" /> : <Sparkles className="size-3 text-violet-400" />}
+            </span>{summarizing ? "Summarizing…" : "AI Summarize"}
+          </DropdownMenuItem>
+        )}
         {onPin && (
           <DropdownMenuItem onClick={e => { e.stopPropagation(); onPin(); }}
             className="text-xs text-white/55 hover:text-white rounded-lg cursor-pointer flex items-center gap-2">
@@ -135,17 +146,24 @@ interface BookmarkCardProps {
   onFavorite: (id: number) => void;
   onArchive?: (id: number) => void;
   onPin?: (id: number) => void;
+  onSummarize?: (id: number) => Promise<void>;
   isSelected?: boolean;
   onToggleSelect?: (id: number) => void;
   selectMode?: boolean;
 }
 
 export function BookmarkCard({
-  bookmark, viewMode, onSelect, onDelete, onFavorite, onArchive, onPin,
+  bookmark, viewMode, onSelect, onDelete, onFavorite, onArchive, onPin, onSummarize,
   isSelected, onToggleSelect, selectMode,
 }: BookmarkCardProps) {
   const meta = getTypeMeta(bookmark.type);
   const bk = bookmark as any;
+  const [summarizing, setSummarizing] = useState(false);
+
+  const handleSummarize = onSummarize ? async () => {
+    setSummarizing(true);
+    try { await onSummarize(bookmark.id); } finally { setSummarizing(false); }
+  } : undefined;
 
   const domain = (() => { try { return bookmark.domain || new URL(bookmark.url).hostname.replace("www.", ""); } catch { return bookmark.url; } })();
 
@@ -219,7 +237,8 @@ export function BookmarkCard({
             <Star className={cn("size-3.5", bookmark.isFavorite && "fill-amber-400")} />
           </ActionBtn>
           <MoreMenu bookmark={bk} onToggleArchive={onArchive ? () => onArchive(bookmark.id) : undefined}
-            onDelete={() => onDelete(bookmark.id)} onPin={onPin ? () => onPin(bookmark.id) : undefined} />
+            onDelete={() => onDelete(bookmark.id)} onPin={onPin ? () => onPin(bookmark.id) : undefined}
+            onSummarize={handleSummarize} summarizing={summarizing} />
         </div>
       </motion.div>
     );
@@ -343,7 +362,8 @@ export function BookmarkCard({
               <ExternalLink className="size-3.5" />
             </ActionBtn>
             <MoreMenu bookmark={bk} onToggleArchive={onArchive ? () => onArchive(bookmark.id) : undefined}
-              onDelete={() => onDelete(bookmark.id)} onPin={onPin ? () => onPin(bookmark.id) : undefined} />
+              onDelete={() => onDelete(bookmark.id)} onPin={onPin ? () => onPin(bookmark.id) : undefined}
+              onSummarize={handleSummarize} summarizing={summarizing} />
           </div>
         </div>
       </div>
