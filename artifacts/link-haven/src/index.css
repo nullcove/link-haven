@@ -320,3 +320,46 @@
     inset: -1px;
   }
 }
+
+/* ─── Clay 3D Icon System ─────────────────────────────────────── */
+@keyframes clay-float   { 0%,100%{transform:translateY(0) rotate(-1deg)} 50%{transform:translateY(-5px) rotate(1deg)} }
+@keyframes clay-spin    { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+@keyframes clay-breathe { 0%,100%{transform:scale(1)} 50%{transform:scale(1.13)} }
+@keyframes clay-wiggle  { 0%,100%{transform:rotate(0)} 20%{transform:rotate(-16deg)} 45%{transform:rotate(14deg)} 65%{transform:rotate(-9deg)} 85%{transform:rotate(6deg)} }
+@keyframes clay-pop     { 0%{transform:scale(.35) rotate(-14deg);opacity:0} 72%{transform:scale(1.08) rotate(2deg)} 100%{transform:scale(1) rotate(0);opacity:1} }
+@keyframes clay-ring    { 0%{transform:scale(1);opacity:.5} 100%{transform:scale(2.6);opacity:0} }
+@keyframes clay-shd     { 0%{transform:translateX(-130%)} 100%{transform:translateX(130%)} }
+@keyframes clay-bar-a   { 0%,100%{height:30%} 50%{height:88%} }
+@keyframes clay-bar-b   { 0%,100%{height:64%} 50%{height:100%} }
+@keyframes clay-bar-c   { 0%,100%{height:45%} 50%{height:72%} }
+@keyframes clay-acc-body-open { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+
+.clay-anim-float   { animation: clay-float   3s ease-in-out infinite; }
+.clay-anim-spin    { animation: clay-spin    9s linear     infinite; }
+.clay-anim-breathe { animation: clay-breathe 2.6s ease-in-out infinite; }
+.clay-anim-wiggle  { animation: clay-wiggle  .65s ease-in-out; }
+.clay-anim-pop     { animation: clay-pop .4s cubic-bezier(.22,1,.36,1) both; }
+
+.clay-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+  cursor: default;
+  transition: transform .2s cubic-bezier(.22,1,.36,1), box-shadow .2s ease, filter .2s ease;
+}
+.clay-icon:hover {
+  transform: scale(1.16) translateY(-3px) rotate(-4deg) !important;
+  filter: brightness(1.1) saturate(1.14);
+}
+.clay-icon .clay-gloss {
+  position: absolute; pointer-events: none; z-index: 2;
+  top: 10%; left: 13%; width: 38%; height: 26%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(255,255,255,.78) 0%, transparent 100%);
+  filter: blur(2.5px);
+}
+.clay-icon .clay-ic {
+  position: relative; z-index: 3; flex-shrink: 0; color: #fff;
+}

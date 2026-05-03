@@ -1,4 +1,6 @@
 # Link Haven
+<!-- Clay 3D Icon System: src/components/ui/clay-icon.tsx — ClayIcon, ClayBarIcon, ClayDot. CSS in index.css.  -->
+<!-- Test account: test@nullcove.com / nullcove2024 -->
 
 ## Overview
 

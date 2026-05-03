@@ -3,9 +3,8 @@ import { useListBookmarks, getListBookmarksQueryKey } from "@workspace/api-clien
 import { AnalyticsDashboard } from "@/features/analytics-dashboard";
 import { TagCloud } from "@/features/tag-cloud";
 import { RecentActivity } from "@/features/recent-activity";
-import { BarChart3 } from "lucide-react";
-import { useState } from "react";
 import { useLocation } from "wouter";
+import { ClayBarIcon } from "@/components/ui/clay-icon";
 
 export default function AnalyticsPage() {
   const [, setLocation] = useLocation();
@@ -15,12 +14,15 @@ export default function AnalyticsPage() {
 
   return (
     <AppLayout>
-      <header className="h-14 shrink-0 border-b border-white/5 flex items-center px-6 bg-background/95 backdrop-blur z-10 sticky top-0">
-        <div className="flex items-center gap-2">
-          <BarChart3 className="size-4 text-indigo-400" />
-          <h1 className="font-semibold text-[15px]">Analytics</h1>
+      <header className="h-14 shrink-0 border-b border-white/[0.06] flex items-center gap-3 px-5 sticky top-0 z-10"
+        style={{ background: "rgba(6,6,12,.9)", backdropFilter: "blur(24px)" }}>
+        <ClayBarIcon color="#0891b2" light="#67e8f9" size={36} />
+        <div>
+          <h1 className="font-black text-[15px] text-white leading-none">Analytics</h1>
+          <p className="text-[10.5px] mt-[2px]" style={{ color: "rgba(255,255,255,.28)" }}>
+            {(bookmarks as any[]).length} bookmarks total
+          </p>
         </div>
-        <span className="ml-3 text-[12px] text-white/25">{bookmarks.length} bookmarks</span>
       </header>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6">

@@ -24,6 +24,7 @@ import {
   Copy, LinkIcon, ChevronDown, CheckSquare, Square,
   Filter, Globe, BookOpen, Command, Zap,
 } from "lucide-react";
+import { ClayDot } from "@/components/ui/clay-icon";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -199,14 +200,23 @@ export default function AppPage() {
                 <ChevronDown className="size-3 opacity-50" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44 bg-[#131320] border border-white/10 rounded-xl p-1 shadow-2xl">
+            <DropdownMenuContent align="end" className="w-48 p-1.5 rounded-2xl shadow-2xl border"
+              style={{ background: "rgba(10,10,18,.96)", borderColor: "rgba(255,255,255,.1)", backdropFilter: "blur(20px)", boxShadow: "0 20px 50px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.06)" }}>
               {Object.entries(SORT_LABELS).map(([key, label]) => {
                 const [sb, so] = key.split("-");
                 const active = sortBy === sb && sortOrder === so;
                 return (
                   <DropdownMenuItem key={key} onClick={() => { setSortBy(sb as SortBy); setSortOrder(so as SortOrder); }}
-                    className={`text-[12px] rounded-lg cursor-pointer ${active ? "text-indigo-300 bg-indigo-500/10" : "text-white/60 hover:text-white"}`}>
-                    {active && <span className="mr-1">✓</span>}{label}
+                    className="rounded-xl cursor-pointer px-3 py-2 flex items-center gap-2.5 outline-none"
+                    style={{ background: active ? "rgba(99,102,241,.14)" : "transparent", color: active ? "#a5b4fc" : "rgba(255,255,255,.55)" }}>
+                    {active && (
+                      <span className="size-4 rounded-full flex items-center justify-center shrink-0"
+                        style={{ background: "radial-gradient(circle at 30% 28%, rgba(255,255,255,.75) 0%, #818cf8 35%, #6366f1 70%)", boxShadow: "0 2px 8px rgba(99,102,241,.5)" }}>
+                        <svg width="7" height="7" viewBox="0 0 8 8" fill="none"><path d="M1.5 4L3.5 6L6.5 2" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </span>
+                    )}
+                    {!active && <span className="size-4 shrink-0" />}
+                    <span className="text-[12px] font-medium">{label}</span>
                   </DropdownMenuItem>
                 );
               })}
@@ -272,19 +282,32 @@ export default function AppPage() {
                 <ChevronDown className="size-3 opacity-50" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 bg-[#131320] border border-white/10 rounded-xl p-1 shadow-2xl">
-              <DropdownMenuItem onClick={() => setIsImportOpen(true)} className="text-[12px] text-white/60 hover:text-white rounded-lg cursor-pointer gap-2">
-                <Upload className="size-3.5 text-indigo-400" /> Import bookmarks
+            <DropdownMenuContent align="end" className="w-52 p-1.5 rounded-2xl shadow-2xl border"
+              style={{ background: "rgba(10,10,18,.96)", borderColor: "rgba(255,255,255,.1)", backdropFilter: "blur(20px)", boxShadow: "0 20px 50px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.06)" }}>
+              <DropdownMenuItem onClick={() => setIsImportOpen(true)}
+                className="rounded-xl cursor-pointer px-3 py-2.5 flex items-center gap-2.5 outline-none group"
+                style={{ color: "rgba(255,255,255,.55)" }}>
+                <ClayDot icon={Upload} color="#6366f1" size={22} />
+                <span className="text-[12px] font-medium group-hover:text-white transition-colors">Import bookmarks</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setIsExportOpen(true)} className="text-[12px] text-white/60 hover:text-white rounded-lg cursor-pointer gap-2">
-                <Download className="size-3.5 text-emerald-400" /> Export bookmarks
+              <DropdownMenuItem onClick={() => setIsExportOpen(true)}
+                className="rounded-xl cursor-pointer px-3 py-2.5 flex items-center gap-2.5 outline-none group"
+                style={{ color: "rgba(255,255,255,.55)" }}>
+                <ClayDot icon={Download} color="#10b981" size={22} />
+                <span className="text-[12px] font-medium group-hover:text-white transition-colors">Export bookmarks</span>
               </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-white/[0.07] my-1" />
-              <DropdownMenuItem onClick={() => setIsDuplicateOpen(true)} className="text-[12px] text-white/60 hover:text-white rounded-lg cursor-pointer gap-2">
-                <Copy className="size-3.5 text-orange-400" /> Find duplicates
+              <DropdownMenuSeparator className="my-1.5" style={{ background: "rgba(255,255,255,.06)" }} />
+              <DropdownMenuItem onClick={() => setIsDuplicateOpen(true)}
+                className="rounded-xl cursor-pointer px-3 py-2.5 flex items-center gap-2.5 outline-none group"
+                style={{ color: "rgba(255,255,255,.55)" }}>
+                <ClayDot icon={Copy} color="#f97316" size={22} />
+                <span className="text-[12px] font-medium group-hover:text-white transition-colors">Find duplicates</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setIsBrokenOpen(true)} className="text-[12px] text-white/60 hover:text-white rounded-lg cursor-pointer gap-2">
-                <LinkIcon className="size-3.5 text-red-400" /> Check broken links
+              <DropdownMenuItem onClick={() => setIsBrokenOpen(true)}
+                className="rounded-xl cursor-pointer px-3 py-2.5 flex items-center gap-2.5 outline-none group"
+                style={{ color: "rgba(255,255,255,.55)" }}>
+                <ClayDot icon={LinkIcon} color="#ef4444" size={22} />
+                <span className="text-[12px] font-medium group-hover:text-white transition-colors">Check broken links</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

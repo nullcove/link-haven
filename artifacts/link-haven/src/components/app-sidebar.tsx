@@ -21,173 +21,45 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Logo } from "./logo";
 import { useBg } from "@/lib/background";
+import { ClayIcon, ClayBarIcon, ClayDot } from "@/components/ui/clay-icon";
 
 const COL_COLORS = [
   "#6366f1","#8b5cf6","#ec4899","#10b981","#f59e0b",
   "#ef4444","#06b6d4","#84cc16","#f97316","#14b8a6",
 ];
 
-/* ─── Animation CSS ─────────────────────────────────────────── */
-const ICON_CSS = `
-@keyframes _ni-float  { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-3.5px)} }
-@keyframes _ni-spin   { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-@keyframes _ni-twinkle{ 0%,100%{opacity:1;filter:brightness(1) drop-shadow(0 0 3px currentColor)}
-                        45%{opacity:.6;filter:brightness(.7)}
-                        50%{opacity:1;filter:brightness(2.2) drop-shadow(0 0 7px currentColor)}
-                        55%{opacity:.7;filter:brightness(.8)} }
-@keyframes _ni-breathe{ 0%,100%{transform:scale(1)} 50%{transform:scale(1.18)} }
-@keyframes _ni-wiggle { 0%,100%{transform:rotate(0)} 20%{transform:rotate(-16deg)} 40%{transform:rotate(14deg)} 60%{transform:rotate(-10deg)} 80%{transform:rotate(8deg)} }
-@keyframes _ni-ring   { 0%{transform:scale(1);opacity:.55} 100%{transform:scale(2.4);opacity:0} }
-@keyframes _ni-ring2  { 0%{transform:scale(1);opacity:.35} 100%{transform:scale(2.8);opacity:0} }
-@keyframes _ni-bar    { 0%,100%{transform:scaleY(1)} 50%{transform:scaleY(1.4)} }
-@keyframes _ni-shd    { 0%{transform:translateX(-120%)} 100%{transform:translateX(120%)} }
-@keyframes _ni-globe  { from{transform:rotateY(0)} to{transform:rotateY(360deg)} }
-@keyframes _ni-logout { 0%{transform:translateX(0)} 100%{transform:translateX(5px)} }
-@keyframes _ni-popIn  { 0%{transform:scale(.55);opacity:0} 65%{transform:scale(1.1)} 100%{transform:scale(1);opacity:1} }
-
-._ni-float   { animation: _ni-float   2.6s ease-in-out infinite; }
-._ni-spin    { animation: _ni-spin    7s   linear     infinite; }
-._ni-twinkle { animation: _ni-twinkle 2.4s ease-in-out infinite; }
-._ni-breathe { animation: _ni-breathe 2.8s ease-in-out infinite; }
-._ni-wiggle  { animation: _ni-wiggle  .6s  ease-in-out; }
-._ni-popIn   { animation: _ni-popIn   .35s cubic-bezier(.22,1,.36,1) both; }
-._ni-logout  { animation: _ni-logout  .5s  ease-in-out infinite alternate; }
-
-._ni-box {
-  transition: transform .18s cubic-bezier(.22,1,.36,1), box-shadow .18s ease, filter .18s ease;
-}
-._ni-box:hover {
-  transform: scale(1.18) translateY(-1px) !important;
-  filter: brightness(1.15);
-}
-/* active nav item icon glow */
-[data-active="true"] ._ni-box {
-  filter: brightness(1.15) saturate(1.2);
-}
-`;
-
-/* ─── 3D Icon chip component ───────────────────────────────── */
-function NavIcon3D({
-  icon: Ic,
-  color,
-  active = false,
-  anim = "none",
-  size = 25,
-}: {
-  icon: React.ElementType;
-  color: string;
-  active?: boolean;
-  anim?: "float" | "spin" | "twinkle" | "breathe" | "wiggle" | "logout" | "none";
-  size?: number;
-}) {
-  const r = Math.round(size * 0.34);
-  const iconAnim = active
-    ? anim !== "none"
-      ? `_ni-${anim}`
-      : ""
-    : "";
-
-  return (
-    <span
-      className="_ni-box relative flex items-center justify-center shrink-0"
-      data-ni-active={active}
-      style={{
-        width: size,
-        height: size,
-        borderRadius: r,
-        /* multi-layer 3D gradient */
-        background: `
-          radial-gradient(circle at 32% 28%, ${color}60 0%, transparent 58%),
-          linear-gradient(145deg, ${color}42 0%, ${color}1a 100%)
-        `,
-        border: `1px solid ${color}45`,
-        boxShadow: active
-          ? `0 0 0 1.5px ${color}35, 0 4px 16px ${color}45, 0 2px 6px ${color}30,
-             inset 0 2px 0 rgba(255,255,255,.18), inset 0 -1.5px 0 rgba(0,0,0,.22)`
-          : `0 2px 8px ${color}28, 0 1px 3px ${color}18,
-             inset 0 2px 0 rgba(255,255,255,.13), inset 0 -1.5px 0 rgba(0,0,0,.18)`,
-      }}
-    >
-      {/* Top specular shine */}
-      <span
-        className="absolute inset-0 pointer-events-none overflow-hidden"
-        style={{ borderRadius: r, background: "linear-gradient(138deg, rgba(255,255,255,.22) 0%, transparent 48%)" }}
-      />
-
-      {/* Active pulsing ring */}
-      {active && (
-        <>
-          <span className="absolute inset-0 pointer-events-none"
-            style={{ borderRadius: r, border: `1.5px solid ${color}65`, animation: "_ni-ring 2s ease-out infinite" }} />
-          <span className="absolute inset-0 pointer-events-none"
-            style={{ borderRadius: r, border: `1px solid ${color}40`, animation: "_ni-ring2 2s ease-out .6s infinite" }} />
-        </>
-      )}
-
-      {/* The icon itself */}
-      <Ic
-        className={iconAnim}
-        style={{
-          width: size * 0.5,
-          height: size * 0.5,
-          color: active ? "#fff" : color,
-          strokeWidth: 2,
-          filter: active
-            ? `drop-shadow(0 1px 4px ${color}80) drop-shadow(0 0 8px ${color}50)`
-            : `drop-shadow(0 1px 2px ${color}55)`,
-          position: "relative",
-          zIndex: 1,
-          flexShrink: 0,
-        }}
-      />
-
-      {/* Active shimmer sweep */}
-      {active && (
-        <span
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            borderRadius: r,
-            background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,.18) 50%, transparent 100%)",
-            animation: "_ni-shd 2.4s ease-in-out infinite",
-            width: "40%",
-            transform: "translateX(-120%)",
-          }}
-        />
-      )}
-    </span>
-  );
-}
-
-/* ─── Avatar color from name hash ───────────────────────────── */
+/* ─── Avatar ─────────────────────────────────────────────────── */
 function nameToColor(name: string) {
-  const palette = ["#6366f1","#8b5cf6","#ec4899","#10b981","#f59e0b","#06b6d4","#f97316","#14b8a6"];
+  const p = ["#6366f1","#8b5cf6","#ec4899","#10b981","#f59e0b","#06b6d4","#f97316","#14b8a6"];
   let h = 0; for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
-  return palette[Math.abs(h) % palette.length];
+  return p[Math.abs(h) % p.length];
 }
 
-/* ─── Sidebar avatar row ─────────────────────────────────────── */
 function SidebarAvatarRow({ user }: { user: User }) {
   const color = nameToColor(user.name);
   const initials = user.name.split(" ").map((w: string) => w[0]).filter(Boolean).join("").substring(0, 2).toUpperCase();
+  const light = _lighten(color);
   return (
     <div className="flex items-center gap-2.5 px-1 py-2 mb-1">
       <div className="relative shrink-0" style={{ width: 32, height: 32 }}>
-        <div className="rounded-full flex items-center justify-center font-black text-white text-[11.5px] uppercase overflow-hidden relative"
+        <div
+          className="rounded-full flex items-center justify-center font-black text-white text-[11.5px] uppercase overflow-hidden relative"
           style={{
             width: 32, height: 32, letterSpacing: "-0.02em",
-            background: `radial-gradient(circle at 32% 28%, ${color}ee 0%, ${color}55 60%, ${color}22 100%)`,
-            border: `2px solid ${color}55`,
-            boxShadow: `0 3px 12px ${color}40, inset 0 2px 0 rgba(255,255,255,.2), inset 0 -1.5px 0 rgba(0,0,0,.18)`,
+            background: `radial-gradient(circle at 30% 28%, rgba(255,255,255,.88) 0%, ${light} 28%, ${color} 60%)`,
+            boxShadow: `0 6px 18px ${color}50, 0 2px 5px rgba(0,0,0,.3), inset 0 -2px 6px rgba(0,0,0,.16), inset 0 2px 8px rgba(255,255,255,.55)`,
           }}>
-          <span className="absolute inset-0 rounded-full" style={{ background: "linear-gradient(145deg, rgba(255,255,255,.25) 0%, transparent 50%)" }} />
+          <span className="absolute" style={{ top: "10%", left: "12%", width: "32%", height: "22%", borderRadius: "50%", background: "radial-gradient(ellipse,rgba(255,255,255,.72) 0%,transparent 100%)", filter: "blur(1.5px)", zIndex: 2 }} />
           <span className="relative z-10 select-none">{initials}</span>
         </div>
-        <span className="absolute bottom-0 right-0 rounded-full border-2"
-          style={{ width: 9, height: 9, borderColor: "rgba(9,9,15,.95)", background: "#34d399", boxShadow: "0 0 6px #34d39990" }} />
+        <span className="absolute bottom-0 right-0 rounded-full border-[2.5px]"
+          style={{ width: 9, height: 9, borderColor: "rgba(9,9,15,.9)",
+            background: "radial-gradient(circle at 35% 25%, rgba(255,255,255,.6) 0%, #22c55e 55%)",
+            boxShadow: "0 0 8px #22c55e90, inset 0 1px 2px rgba(255,255,255,.4)" }} />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-[12px] font-semibold text-white/80 leading-none truncate">{user.name}</p>
-        <p className="text-[11px] mt-0.5 truncate" style={{ color: `${color}99` }}>
+        <p className="text-[10.5px] mt-0.5 truncate font-medium" style={{ color: `${color}88` }}>
           {user.isGuest ? "Guest session" : user.email}
         </p>
       </div>
@@ -232,31 +104,29 @@ export function AppSidebar({ user, onOpenGemini, bgActive = false }: AppSidebarP
 
   const libraryItems = [
     { href: "/app",                label: "All Bookmarks", icon: Bookmark, color: "#6366f1", count: stats?.totalBookmarks, anim: "float"   as const },
-    { href: "/app?view=favorites", label: "Favourites",    icon: Star,     color: "#f59e0b", count: stats?.totalFavorites, anim: "twinkle" as const },
+    { href: "/app?view=favorites", label: "Favourites",    icon: Star,     color: "#f59e0b", count: stats?.totalFavorites, anim: "breathe" as const },
     { href: "/app?view=pinned",    label: "Pinned",        icon: Pin,      color: "#8b5cf6", count: null,                  anim: "wiggle"  as const },
     { href: "/app?view=archive",   label: "Archive",       icon: Archive,  color: "#64748b", count: stats?.totalArchived,  anim: "none"    as const },
   ];
 
   const discoverItems = [
-    { href: "/analytics",       label: "Analytics",  icon: BarChart3, color: "#06b6d4", anim: "breathe" as const },
-    { href: "/app?view=recent", label: "Recent",     icon: Clock,     color: "#f97316", anim: "none"    as const },
-    { href: "/app?view=domains",label: "By Domain",  icon: Globe,     color: "#3b82f6", anim: "spin"    as const },
+    { href: "/analytics",        label: "Analytics",  icon: BarChart3, color: "#06b6d4", bar: true  },
+    { href: "/app?view=recent",  label: "Recent",     icon: Clock,     color: "#f97316", bar: false },
+    { href: "/app?view=domains", label: "By Domain",  icon: Globe,     color: "#3b82f6", bar: false },
   ];
 
   return (
     <Sidebar
       className="border-r border-white/[0.06] w-[220px] shrink-0"
       style={bgActive
-        ? { background: "rgba(7,7,14,.78)", backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)" }
+        ? { background: "rgba(7,7,14,.8)", backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)" }
         : { background: "#09090f" }
       }
     >
-      <style dangerouslySetInnerHTML={{ __html: ICON_CSS }} />
-
       <SidebarHeader className="px-4 py-4 border-b border-white/[0.06]">
         <Link href="/" className="flex items-center gap-2.5 group">
           <Logo size={28} />
-          <span className="font-bold text-[15px] text-white tracking-tight group-hover:text-indigo-200 transition-colors">
+          <span className="font-black text-[15px] text-white tracking-tight group-hover:text-indigo-200 transition-colors">
             Link Haven
           </span>
         </Link>
@@ -265,19 +135,29 @@ export function AppSidebar({ user, onOpenGemini, bgActive = false }: AppSidebarP
       <SidebarContent className="px-2 py-3 gap-0 overflow-y-auto">
 
         {/* Library */}
-        <SidebarGroup className="mb-4">
-          <p className="text-[10px] font-semibold text-white/20 uppercase tracking-[0.12em] px-2 mb-1.5">Library</p>
+        <SidebarGroup className="mb-3">
+          <p className="text-[9.5px] font-black text-white/18 uppercase tracking-[0.15em] px-2 mb-2">Library</p>
           <SidebarGroupContent>
-            <SidebarMenu className="gap-0.5">
+            <SidebarMenu className="gap-[3px]">
               {libraryItems.map(({ href, label, icon, color, count, anim }) => {
                 const active = isActive(href);
                 return (
                   <SidebarMenuItem key={href}>
-                    <SidebarMenuButton asChild isActive={active} className="rounded-lg h-8 px-2 text-[13px]">
-                      <Link href={href} className="flex items-center gap-2.5" data-active={active}>
-                        <NavIcon3D icon={icon} color={color} active={active} anim={anim} />
-                        <span className="flex-1 truncate">{label}</span>
-                        {count != null && <span className="text-[11px] tabular-nums opacity-40">{count}</span>}
+                    <SidebarMenuButton asChild isActive={active}
+                      className="rounded-xl h-9 px-2 text-[12.5px] transition-all"
+                      style={active ? {
+                        background: `linear-gradient(100deg, ${color}1a 0%, transparent 70%)`,
+                        borderRight: `2px solid ${color}60`,
+                      } : {}}>
+                      <Link href={href} className="flex items-center gap-2.5">
+                        <ClayIcon icon={icon} color={color} size={26} active={active} anim={active ? anim : "none"} />
+                        <span className={`flex-1 truncate font-semibold ${active ? "text-white" : "text-white/55"}`}>{label}</span>
+                        {count != null && (
+                          <span className="text-[10px] tabular-nums px-1.5 py-0.5 rounded-md font-bold"
+                            style={{ background: active ? `${color}25` : "rgba(255,255,255,.05)", color: active ? color : "rgba(255,255,255,.25)" }}>
+                            {count}
+                          </span>
+                        )}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -288,18 +168,26 @@ export function AppSidebar({ user, onOpenGemini, bgActive = false }: AppSidebarP
         </SidebarGroup>
 
         {/* Discover */}
-        <SidebarGroup className="mb-4">
-          <p className="text-[10px] font-semibold text-white/20 uppercase tracking-[0.12em] px-2 mb-1.5">Discover</p>
+        <SidebarGroup className="mb-3">
+          <p className="text-[9.5px] font-black text-white/18 uppercase tracking-[0.15em] px-2 mb-2">Discover</p>
           <SidebarGroupContent>
-            <SidebarMenu className="gap-0.5">
-              {discoverItems.map(({ href, label, icon, color, anim }) => {
+            <SidebarMenu className="gap-[3px]">
+              {discoverItems.map(({ href, label, icon, color, bar }) => {
                 const active = isActive(href);
                 return (
                   <SidebarMenuItem key={href}>
-                    <SidebarMenuButton asChild isActive={active} className="rounded-lg h-8 px-2 text-[13px]">
-                      <Link href={href} className="flex items-center gap-2.5" data-active={active}>
-                        <NavIcon3D icon={icon} color={color} active={active} anim={anim} />
-                        <span className="flex-1 truncate">{label}</span>
+                    <SidebarMenuButton asChild isActive={active}
+                      className="rounded-xl h-9 px-2 text-[12.5px] transition-all"
+                      style={active ? {
+                        background: `linear-gradient(100deg, ${color}1a 0%, transparent 70%)`,
+                        borderRight: `2px solid ${color}60`,
+                      } : {}}>
+                      <Link href={href} className="flex items-center gap-2.5">
+                        {bar
+                          ? <ClayBarIcon color={color} size={26} />
+                          : <ClayIcon icon={icon} color={color} size={26} active={active} anim={active ? "breathe" : "none"} />
+                        }
+                        <span className={`flex-1 truncate font-semibold ${active ? "text-white" : "text-white/55"}`}>{label}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -311,36 +199,36 @@ export function AppSidebar({ user, onOpenGemini, bgActive = false }: AppSidebarP
 
         {/* AI Assistant */}
         {onOpenGemini && (
-          <SidebarGroup className="mb-4">
+          <SidebarGroup className="mb-3">
             <button
               onClick={onOpenGemini}
-              className="w-full flex items-center gap-2.5 px-2 py-2.5 rounded-xl transition-all group"
+              className="w-full flex items-center gap-2.5 px-2 py-2 rounded-xl transition-all group border"
               style={{
                 background: "linear-gradient(135deg, rgba(99,102,241,.1) 0%, rgba(139,92,246,.06) 100%)",
-                border: "1px solid rgba(99,102,241,.22)",
+                borderColor: "rgba(99,102,241,.22)",
                 boxShadow: "inset 0 1px 0 rgba(255,255,255,.05)",
               }}
-              onMouseEnter={e => (e.currentTarget.style.background = "linear-gradient(135deg, rgba(99,102,241,.18) 0%, rgba(139,92,246,.12) 100%)")}
-              onMouseLeave={e => (e.currentTarget.style.background = "linear-gradient(135deg, rgba(99,102,241,.1) 0%, rgba(139,92,246,.06) 100%)")}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "linear-gradient(135deg, rgba(99,102,241,.18) 0%, rgba(139,92,246,.12) 100%)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "linear-gradient(135deg, rgba(99,102,241,.1) 0%, rgba(139,92,246,.06) 100%)"; }}
             >
-              <NavIcon3D icon={Brain} color="#a78bfa" active anim="breathe" size={25} />
-              <span className="text-[12px] font-semibold text-indigo-300 group-hover:text-indigo-200 flex-1 text-left">AI Assistant</span>
-              <Sparkles className="size-3 text-indigo-400/50 group-hover:text-indigo-400 transition-colors" />
+              <ClayIcon icon={Brain} color="#7c3aed" light="#c4b5fd" size={26} active anim="breathe" />
+              <span className="text-[12px] font-bold text-indigo-300 group-hover:text-indigo-200 flex-1 text-left">AI Assistant</span>
+              <Sparkles className="size-3 text-indigo-400/40 group-hover:text-indigo-400 transition-colors" />
             </button>
           </SidebarGroup>
         )}
 
         {/* Collections */}
-        <SidebarGroup className="mb-4">
-          <div className="flex items-center justify-between px-2 mb-1.5">
+        <SidebarGroup className="mb-3">
+          <div className="flex items-center justify-between px-2 mb-2">
             <button
-              className="flex items-center gap-1 text-[10px] font-semibold text-white/20 uppercase tracking-[0.12em] hover:text-white/40 transition-colors"
+              className="flex items-center gap-1 text-[9.5px] font-black text-white/18 uppercase tracking-[0.15em] hover:text-white/40 transition-colors"
               onClick={() => setColsOpen(v => !v)}>
               {colsOpen ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
               Collections
             </button>
             <button onClick={() => setShowNewCol(v => !v)} title="New collection"
-              className="text-white/20 hover:text-white/55 transition-colors p-0.5 hover:scale-110">
+              className="text-white/20 hover:text-white/55 transition-all p-0.5 hover:scale-110 hover:rotate-12">
               <FolderPlus className="size-3.5" />
             </button>
           </div>
@@ -350,35 +238,32 @@ export function AppSidebar({ user, onOpenGemini, bgActive = false }: AppSidebarP
               <input autoFocus value={newColName} onChange={e => setNewColName(e.target.value)}
                 onKeyDown={e => e.key === "Escape" && setShowNewCol(false)}
                 placeholder="Collection name…"
-                className="w-full text-[12px] bg-white/[0.06] border border-white/10 rounded-md px-2.5 py-1.5 text-white/80 placeholder:text-white/20 outline-none focus:border-indigo-500/40"
+                className="w-full text-[12px] bg-white/[0.06] border border-white/10 rounded-xl px-2.5 py-1.5 text-white/80 placeholder:text-white/20 outline-none focus:border-indigo-500/40"
               />
             </form>
           )}
 
           {colsOpen && (
             <SidebarGroupContent>
-              <SidebarMenu className="gap-0.5">
+              <SidebarMenu className="gap-[3px]">
                 {(collections as Collection[] | undefined)?.map((col: Collection, i: number) => {
                   const cc = col.color || COL_COLORS[i % COL_COLORS.length];
+                  const active = location === `/app/collection/${col.id}`;
                   return (
                     <SidebarMenuItem key={col.id}>
-                      <SidebarMenuButton asChild isActive={location === `/app/collection/${col.id}`} className="rounded-lg h-8 px-2 text-[13px]">
+                      <SidebarMenuButton asChild isActive={active}
+                        className="rounded-xl h-8 px-2 text-[12.5px] transition-all"
+                        style={active ? { background: `linear-gradient(100deg, ${cc}18 0%, transparent 70%)`, borderRight: `2px solid ${cc}50` } : {}}>
                         <Link href={`/app/collection/${col.id}`} className="flex items-center gap-2.5">
                           {col.icon ? (
-                            <span className="text-[13px] leading-none">{col.icon}</span>
+                            <span className="text-[14px] leading-none">{col.icon}</span>
                           ) : (
-                            <span className="_ni-box flex items-center justify-center shrink-0 rounded-[8px]"
-                              style={{
-                                width: 20, height: 20,
-                                background: `radial-gradient(circle at 30% 30%, ${cc}55, transparent 60%), linear-gradient(145deg, ${cc}35, ${cc}14)`,
-                                border: `1px solid ${cc}35`,
-                                boxShadow: `0 2px 6px ${cc}22, inset 0 1px 0 rgba(255,255,255,.1)`,
-                              }}>
-                              <span className="size-1.5 rounded-full" style={{ backgroundColor: cc, boxShadow: `0 0 4px ${cc}` }} />
-                            </span>
+                            <ClayDot icon={Archive} color={cc} size={20} />
                           )}
-                          <span className="flex-1 truncate">{col.name}</span>
-                          <span className="text-[11px] tabular-nums opacity-40">{(col as any).bookmarkCount}</span>
+                          <span className={`flex-1 truncate ${active ? "text-white font-semibold" : "text-white/50"}`}>{col.name}</span>
+                          <span className="text-[10px] tabular-nums" style={{ color: active ? cc + "99" : "rgba(255,255,255,.2)" }}>
+                            {(col as any).bookmarkCount}
+                          </span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -392,24 +277,27 @@ export function AppSidebar({ user, onOpenGemini, bgActive = false }: AppSidebarP
         {/* Tags */}
         {tags && (tags as any[]).length > 0 && (
           <SidebarGroup>
-            <button className="flex items-center gap-1 px-2 mb-2 text-[10px] font-semibold text-white/20 uppercase tracking-[0.12em] hover:text-white/40 transition-colors"
+            <button className="flex items-center gap-1 px-2 mb-2 text-[9.5px] font-black text-white/18 uppercase tracking-[0.15em] hover:text-white/40 transition-colors"
               onClick={() => setTagsOpen(v => !v)}>
               {tagsOpen ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
               Tags
             </button>
             {tagsOpen && (
-              <div className="px-2 flex flex-wrap gap-1 pb-2">
-                {(tags as any[]).slice(0, 25).map((tag: any) => (
-                  <Link key={tag.name} href={`/app?tag=${tag.name}`}>
-                    <span className={`inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[11px] border cursor-pointer transition-all hover:scale-105 ${
-                      qs === `?tag=${tag.name}`
-                        ? "bg-indigo-500/20 border-indigo-500/30 text-indigo-300"
-                        : "bg-white/[0.04] border-white/[0.06] text-white/35 hover:text-white/60"
-                    }`}>
-                      <Hash className="size-2.5" />{tag.name}
-                    </span>
-                  </Link>
-                ))}
+              <div className="px-2 flex flex-wrap gap-1.5 pb-2">
+                {(tags as any[]).slice(0, 25).map((tag: any) => {
+                  const active = qs === `?tag=${tag.name}`;
+                  return (
+                    <Link key={tag.name} href={`/app?tag=${tag.name}`}>
+                      <span className={`inline-flex items-center gap-0.5 rounded-lg px-2 py-1 text-[11px] border cursor-pointer transition-all hover:scale-105 font-medium ${
+                        active
+                          ? "bg-indigo-500/18 border-indigo-500/35 text-indigo-300"
+                          : "bg-white/[0.04] border-white/[0.06] text-white/32 hover:text-white/60 hover:border-white/[0.12]"
+                      }`}>
+                        <Hash className="size-2.5" />{tag.name}
+                      </span>
+                    </Link>
+                  );
+                })}
               </div>
             )}
           </SidebarGroup>
@@ -418,43 +306,26 @@ export function AppSidebar({ user, onOpenGemini, bgActive = false }: AppSidebarP
 
       {/* Footer */}
       <SidebarFooter className="border-t border-white/[0.06] p-3">
-        {/* Avatar row */}
         <SidebarAvatarRow user={user} />
+        <SidebarMenu className="gap-[3px]">
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={location === "/settings"}
+              className="rounded-xl h-9 px-2 text-[12.5px] transition-all"
+              style={location === "/settings" ? { background: "linear-gradient(100deg, rgba(100,116,139,.18) 0%, transparent 70%)", borderRight: "2px solid rgba(100,116,139,.4)" } : {}}>
+              <Link href="/settings" className="flex items-center gap-2.5">
+                <ClayIcon icon={Settings} color="#64748b" light="#94a3b8" size={26} active={location === "/settings"} anim={location === "/settings" ? "spin" : "none"} />
+                <span className={`font-semibold ${location === "/settings" ? "text-white" : "text-white/45"}`}>Settings</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
 
-        <SidebarMenu className="gap-0.5">
-          {[
-            { href: "/settings", icon: Settings, color: "#94a3b8", label: "Settings", anim: "spin" as const, labelColor: "text-white/55" },
-          ].map(({ href, icon, color, label, anim, labelColor }) => {
-            const active = location === href;
-            return (
-              <SidebarMenuItem key={href}>
-                <SidebarMenuButton asChild isActive={active} className="rounded-lg h-8 px-2 text-[13px]">
-                  <Link href={href} className="flex items-center gap-2.5">
-                    <NavIcon3D icon={icon} color={color} active={active} anim={anim} />
-                    <span className={labelColor}>{label}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            );
-          })}
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={handleLogout}
-              className="rounded-lg h-8 px-2 text-[13px] text-white/35 hover:text-red-400 hover:bg-red-500/[0.06] group/lo">
+              className="rounded-xl h-9 px-2 text-[12.5px] text-white/35 hover:text-red-400 hover:bg-red-500/[0.06] group/lo transition-all">
               <span className="flex items-center gap-2.5 w-full">
-                <span className="_ni-box relative flex items-center justify-center shrink-0 rounded-[8px]"
-                  style={{
-                    width: 25, height: 25,
-                    background: "radial-gradient(circle at 32% 28%, rgba(239,68,68,.45), transparent 58%), linear-gradient(145deg, rgba(239,68,68,.35), rgba(239,68,68,.12))",
-                    border: "1px solid rgba(239,68,68,.38)",
-                    boxShadow: "0 2px 8px rgba(239,68,68,.22), inset 0 2px 0 rgba(255,255,255,.1), inset 0 -1.5px 0 rgba(0,0,0,.18)",
-                  }}>
-                  <span className="absolute inset-0 rounded-[8px]" style={{ background: "linear-gradient(138deg, rgba(255,255,255,.18) 0%, transparent 48%)" }} />
-                  <LogOut
-                    style={{ width: 12, height: 12, color: "#f87171", filter: "drop-shadow(0 1px 2px rgba(239,68,68,.55))", position: "relative", zIndex: 1 }}
-                    strokeWidth={2} />
-                </span>
-                Sign out
+                <ClayIcon icon={LogOut} color="#ef4444" light="#fca5a5" size={26} />
+                <span className="group-hover/lo:text-red-400 transition-colors">Sign out</span>
               </span>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -462,4 +333,12 @@ export function AppSidebar({ user, onOpenGemini, bgActive = false }: AppSidebarP
       </SidebarFooter>
     </Sidebar>
   );
+}
+
+function _lighten(hex: string): string {
+  const m = hex.replace("#","").match(/.{2}/g);
+  if (!m || m.length < 3) return hex + "99";
+  const [r,g,b] = m.map(c => parseInt(c,16));
+  const mix = (v: number) => Math.round(v + (255 - v) * 0.42).toString(16).padStart(2,"0");
+  return `#${mix(r)}${mix(g)}${mix(b)}`;
 }
