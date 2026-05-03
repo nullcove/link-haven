@@ -70,12 +70,14 @@ const CHAT_CSS = `
 ._ai-bdglow { animation: ai-border-glow 3s ease-in-out infinite; }
 
 ._ai-msg-text {
-  text-shadow: 0 1px 14px rgba(0,0,0,.85), 0 1px 4px rgba(0,0,0,.6);
+  text-shadow: 0 0 20px rgba(0,0,0,1), 0 2px 8px rgba(0,0,0,1), 0 1px 2px rgba(0,0,0,1);
+  color: #fff;
+  font-weight: 450;
 }
-._ai-msg-text strong { color: #fff; text-shadow: 0 1px 14px rgba(0,0,0,.9); }
-._ai-msg-text em { color: rgba(255,255,255,.9); }
+._ai-msg-text strong { color: #fff; font-weight: 700; }
+._ai-msg-text em { color: #e0e0ff; }
 ._ai-glass-ui {
-  text-shadow: 0 1px 8px rgba(0,0,0,.7), 0 1px 3px rgba(0,0,0,.5);
+  text-shadow: 0 0 16px rgba(0,0,0,1), 0 1px 4px rgba(0,0,0,1);
 }
 
 ._ai-title {
@@ -224,12 +226,12 @@ function MsgBubble({ msg, userLetter }: { msg: Msg; userLetter: string }) {
       {isUser ? <UserOrb letter={userLetter} /> : <BotOrb />}
       <div className={cn("max-w-[80%] flex flex-col gap-1.5", isUser ? "items-end" : "items-start")}>
         <div className={cn(
-          "rounded-2xl px-4 py-2.5 text-[13px] leading-relaxed",
+          "px-1 py-1 text-[13.5px] leading-relaxed",
           isUser
-            ? "bg-indigo-500/[0.18] border border-indigo-400/[0.22] text-white rounded-tr-sm"
+            ? "bg-white/[0.15] border border-white/[0.2] rounded-2xl rounded-tr-sm px-4 py-2.5 text-white"
             : msg.error
-              ? "text-red-200/90 rounded-tl-sm"
-              : "text-white/95 rounded-tl-sm"
+              ? "text-red-300 rounded-tl-sm"
+              : "text-white rounded-tl-sm"
         )}>
           {html ? <span className="_ai-msg-text" dangerouslySetInnerHTML={{ __html: html }} /> : null}
           {msg.streaming && <span className="_ai-cur" />}
@@ -455,7 +457,7 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
         exit={{ opacity: 0 }}
         transition={{ duration: 0.22 }}
         className="fixed inset-0 z-[998]"
-        style={{ background: "rgba(0,0,0,0.28)" }}
+        style={{ background: "rgba(0,0,0,0.2)" }}
         onClick={onClose}
       />
 
@@ -473,15 +475,15 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
             borderRadius: 20,
             overflow: "hidden",
             background: "transparent",
-            backdropFilter: "blur(48px) saturate(2) brightness(0.9)",
-            WebkitBackdropFilter: "blur(48px) saturate(2) brightness(0.9)",
-            border: "1px solid rgba(255,255,255,0.14)",
-            boxShadow: "0 24px 64px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.1)",
+            backdropFilter: "blur(20px) saturate(1.6)",
+            WebkitBackdropFilter: "blur(20px) saturate(1.6)",
+            border: "1px solid rgba(255,255,255,0.18)",
+            boxShadow: "0 24px 64px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.12)",
           }}
           onClick={e => e.stopPropagation()}
         >
           {/* ── Header ─────────────────────────────────────────── */}
-          <div className="shrink-0 flex items-center gap-3 px-5 py-4 border-b border-white/[0.1]" style={{ background: "rgba(0,0,0,0.22)" }}>
+          <div className="shrink-0 flex items-center gap-3 px-5 py-4 border-b border-white/[0.12]" style={{ background: "rgba(0,0,0,0.1)" }}>
             <div className="relative shrink-0">
               <BotOrb />
               <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-emerald-400 border-2 border-[#0a081c] _ai-ping" />
@@ -493,24 +495,25 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
                 <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 font-semibold">online</span>
               </div>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-[10px] text-white/40 font-mono">gemini-2.0-flash</span>
-                {ping !== null && <><span className="text-white/20">·</span><span className="text-[10px] text-white/40 font-mono">{ping}ms</span></>}
+                <span className="text-[10px] text-white/70 font-mono _ai-glass-ui">gemini-2.0-flash</span>
+                {ping !== null && <><span className="text-white/40 _ai-glass-ui">·</span><span className="text-[10px] text-white/70 font-mono _ai-glass-ui">{ping}ms</span></>}
               </div>
             </div>
 
             <div className="flex items-center gap-0.5">
-              <button onClick={copyLast} title="Copy" className="size-8 rounded-lg flex items-center justify-center text-white/35 hover:text-white/70 hover:bg-white/[0.06] transition-all">
+              <button onClick={copyLast} title="Copy" className="size-8 rounded-lg flex items-center justify-center text-white/60 hover:text-white hover:bg-white/[0.1] transition-all" style={{ filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.8))" }}>
                 <Copy className="size-3.5" />
               </button>
-              <button onClick={reset} title="Clear" className="size-8 rounded-lg flex items-center justify-center text-white/35 hover:text-white/70 hover:bg-white/[0.06] transition-all">
+              <button onClick={reset} title="Clear" className="size-8 rounded-lg flex items-center justify-center text-white/60 hover:text-white hover:bg-white/[0.1] transition-all" style={{ filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.8))" }}>
                 <RotateCcw className="size-3.5" />
               </button>
               <button onClick={() => setShowStats(v => !v)} title="Stats"
                 className={cn("size-8 rounded-lg flex items-center justify-center transition-all",
-                  showStats ? "text-violet-400 bg-violet-500/10" : "text-white/35 hover:text-white/70 hover:bg-white/[0.06]")}>
+                  showStats ? "text-violet-300 bg-violet-500/15" : "text-white/60 hover:text-white hover:bg-white/[0.1]")}
+                style={{ filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.8))" }}>
                 <Activity className="size-3.5" />
               </button>
-              <button onClick={onClose} className="size-8 rounded-lg flex items-center justify-center text-white/35 hover:text-white/75 hover:bg-white/[0.06] transition-all ml-0.5">
+              <button onClick={onClose} className="size-8 rounded-lg flex items-center justify-center text-white/60 hover:text-white hover:bg-white/[0.1] transition-all ml-0.5" style={{ filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.8))" }}>
                 <X className="size-4" />
               </button>
             </div>
@@ -558,7 +561,7 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
           </AnimatePresence>
 
           {/* ── Input ──────────────────────────────────────────── */}
-          <div className="shrink-0 px-4 pb-4 pt-3 border-t border-white/[0.1]" style={{ background: "rgba(0,0,0,0.22)" }}>
+          <div className="shrink-0 px-4 pb-4 pt-3 border-t border-white/[0.12]" style={{ background: "rgba(0,0,0,0.1)" }}>
             <div className="flex gap-2 items-end">
               <textarea
                 ref={inputRef}
@@ -571,14 +574,15 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
                 placeholder="Add a link, delete bookmarks, tag, organize… anything"
                 rows={1}
                 disabled={streaming}
-                className="flex-1 resize-none min-h-[44px] max-h-[120px] px-4 py-3 rounded-xl text-[13px] text-white placeholder:text-white/25 outline-none transition-all border disabled:opacity-40"
+                className="flex-1 resize-none min-h-[44px] max-h-[120px] px-4 py-3 rounded-xl text-[13px] text-white placeholder:text-white/50 outline-none transition-all border disabled:opacity-40"
                 style={{
-                  background: "rgba(255,255,255,0.06)",
-                  borderColor: "rgba(255,255,255,0.12)",
+                  background: "rgba(255,255,255,0.1)",
+                  borderColor: "rgba(255,255,255,0.2)",
                   lineHeight: "1.5",
+                  textShadow: "0 1px 8px rgba(0,0,0,0.9)",
                 }}
-                onFocus={e => { e.target.style.borderColor = "rgba(139,92,246,0.5)"; e.target.style.background = "rgba(255,255,255,0.08)"; }}
-                onBlur={e => { e.target.style.borderColor = "rgba(255,255,255,0.12)"; e.target.style.background = "rgba(255,255,255,0.06)"; }}
+                onFocus={e => { e.target.style.borderColor = "rgba(167,139,250,0.7)"; e.target.style.background = "rgba(255,255,255,0.14)"; }}
+                onBlur={e => { e.target.style.borderColor = "rgba(255,255,255,0.2)"; e.target.style.background = "rgba(255,255,255,0.1)"; }}
               />
 
               {streaming ? (
