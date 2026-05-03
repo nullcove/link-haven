@@ -14,7 +14,7 @@ import {
 import {
   Bookmark, Hash, LogOut, Settings, Star, Archive,
   FolderPlus, ChevronDown, ChevronRight, BarChart3,
-  Brain, Pin, Clock, Globe, Sparkles,
+  Pin, Clock, Globe,
 } from "lucide-react";
 import { clearAuthToken } from "@/lib/auth";
 import { useState } from "react";
@@ -67,9 +67,9 @@ function SidebarAvatarRow({ user }: { user: User }) {
   );
 }
 
-interface AppSidebarProps { user: User; onOpenGemini?: () => void; bgActive?: boolean; }
+interface AppSidebarProps { user: User; bgActive?: boolean; }
 
-export function AppSidebar({ user, onOpenGemini, bgActive = false }: AppSidebarProps) {
+export function AppSidebar({ user, bgActive = false }: AppSidebarProps) {
   const [location, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [newColName, setNewColName] = useState("");
@@ -196,27 +196,6 @@ export function AppSidebar({ user, onOpenGemini, bgActive = false }: AppSidebarP
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-
-        {/* AI Assistant */}
-        {onOpenGemini && (
-          <SidebarGroup className="mb-3">
-            <button
-              onClick={onOpenGemini}
-              className="w-full flex items-center gap-2.5 px-2 py-2 rounded-xl transition-all group border"
-              style={{
-                background: "linear-gradient(135deg, rgba(99,102,241,.1) 0%, rgba(139,92,246,.06) 100%)",
-                borderColor: "rgba(99,102,241,.22)",
-                boxShadow: "inset 0 1px 0 rgba(255,255,255,.05)",
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "linear-gradient(135deg, rgba(99,102,241,.18) 0%, rgba(139,92,246,.12) 100%)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "linear-gradient(135deg, rgba(99,102,241,.1) 0%, rgba(139,92,246,.06) 100%)"; }}
-            >
-              <ClayIcon icon={Brain} color="#7c3aed" light="#c4b5fd" size={26} active anim="breathe" />
-              <span className="text-[12px] font-bold text-indigo-300 group-hover:text-indigo-200 flex-1 text-left">AI Assistant</span>
-              <Sparkles className="size-3 text-indigo-400/40 group-hover:text-indigo-400 transition-colors" />
-            </button>
-          </SidebarGroup>
-        )}
 
         {/* Collections */}
         <SidebarGroup className="mb-3">
