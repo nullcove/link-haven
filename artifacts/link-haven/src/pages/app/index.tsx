@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, lazy, Suspense } from "react";
 import { AppLayout } from "@/components/layout/app-layout";
 import {
   useListBookmarks, getListBookmarksQueryKey,
@@ -7,17 +7,18 @@ import {
 import { BookmarkCard } from "@/components/bookmark-card";
 import { BookmarkDetailDrawer } from "@/components/bookmark-detail-drawer";
 import { AddBookmarkDialog } from "@/components/add-bookmark-dialog";
-import { ExportDialog } from "@/features/export-dialog";
-import { ImportDialog } from "@/features/import-dialog";
-import { DuplicateFinder } from "@/features/duplicate-finder";
-import { BrokenLinksChecker } from "@/features/broken-links";
-import { AiSearch } from "@/features/ai-search";
-import { BulkActionBar } from "@/features/bulk-action-bar";
-import { CommandPalette } from "@/features/command-palette";
 import { AdvancedFilters, FilterState, DEFAULT_FILTERS, countActiveFilters, applyFilters } from "@/features/advanced-filters";
 import { SpeedDial } from "@/features/speed-dial";
-import { DomainGrouping } from "@/features/domain-grouping";
-import { FocusMode } from "@/features/focus-mode";
+
+const ExportDialog      = lazy(() => import("@/features/export-dialog").then(m => ({ default: m.ExportDialog })));
+const ImportDialog      = lazy(() => import("@/features/import-dialog").then(m => ({ default: m.ImportDialog })));
+const DuplicateFinder   = lazy(() => import("@/features/duplicate-finder").then(m => ({ default: m.DuplicateFinder })));
+const BrokenLinksChecker= lazy(() => import("@/features/broken-links").then(m => ({ default: m.BrokenLinksChecker })));
+const AiSearch          = lazy(() => import("@/features/ai-search").then(m => ({ default: m.AiSearch })));
+const BulkActionBar     = lazy(() => import("@/features/bulk-action-bar").then(m => ({ default: m.BulkActionBar })));
+const CommandPalette    = lazy(() => import("@/features/command-palette").then(m => ({ default: m.CommandPalette })));
+const DomainGrouping    = lazy(() => import("@/features/domain-grouping").then(m => ({ default: m.DomainGrouping })));
+const FocusMode         = lazy(() => import("@/features/focus-mode").then(m => ({ default: m.FocusMode })));
 import {
   LayoutGrid, List, Plus, Search, Bookmark,
   SlidersHorizontal, X, Sparkles, Download, Upload,
@@ -365,16 +366,18 @@ export default function AppPage() {
 
             {/* Domain grouping view */}
             {viewLayout === "domain" ? (
-              <DomainGrouping
-                bookmarks={bookmarks}
-                onSelect={b => { if (selectMode) { toggleSelect(b.id); return; } setSelectedBookmark(b); }}
-                onDelete={handleDelete}
-                onFavorite={async (id) => { await favMutation.mutateAsync({ id }); invalidate(); }}
-                onArchive={async (id) => { await archiveMutation.mutateAsync({ id }); invalidate(); }}
-                selectedIds={selectedIds}
-                onToggleSelect={toggleSelect}
-                selectMode={selectMode}
-              />
+              <Suspense fallback={null}>
+                <DomainGrouping
+                  bookmarks={bookmarks}
+                  onSelect={b => { if (selectMode) { toggleSelect(b.id); return; } setSelectedBookmark(b); }}
+                  onDelete={handleDelete}
+                  onFavorite={async (id) => { await favMutation.mutateAsync({ id }); invalidate(); }}
+                  onArchive={async (id) => { await archiveMutation.mutateAsync({ id }); invalidate(); }}
+                  selectedIds={selectedIds}
+                  onToggleSelect={toggleSelect}
+                  selectMode={selectMode}
+                />
+              </Suspense>
             ) : (
               <div className={
                 viewLayout === "grid"
@@ -426,48 +429,42 @@ export default function AppPage() {
         onDelete={handleDelete}
       />
       <AddBookmarkDialog open={isAddOpen} onOpenChange={setIsAddOpen} />
-      <ExportDialog open={isExportOpen} onOpenChange={setIsExportOpen} />
-      <ImportDialog open={isImportOpen} onOpenChange={setIsImportOpen} onImported={invalidate} />
-      <DuplicateFinder open={isDuplicateOpen} onOpenChange={setIsDuplicateOpen} onDeleted={invalidate} />
-      <BrokenLinksChecker open={isBrokenOpen} onOpenChange={setIsBrokenOpen} onDeleted={invalidate} />
-
-      {/* AI semantic search panel */}
-      {aiOpen && (
-        <AiSearch
-          bookmarks={rawBookmarks as any}
-          onSelect={b => { setSelectedBookmark(b); setAiOpen(false); }}
-          onClose={() => setAiOpen(false)}
-        />
-      )}
-
-      {/* Command palette */}
-      {cmdOpen && (
-        <CommandPalette
-          bookmarks={rawBookmarks as any}
-          onSelect={b => setSelectedBookmark(b)}
-          onClose={() => setCmdOpen(false)}
-          onAddBookmark={() => setIsAddOpen(true)}
-          onExport={() => setIsExportOpen(true)}
-          onImport={() => setIsImportOpen(true)}
-        />
-      )}
-
-      {/* Focus mode */}
-      {focusMode && (
-        <FocusMode
-          bookmarks={rawBookmarks as any}
-          onClose={() => setFocusMode(false)}
-        />
-      )}
-
-      {/* Bulk action bar */}
-      {selectMode && selectedIds.size > 0 && (
-        <BulkActionBar
-          selectedIds={Array.from(selectedIds)}
-          onClear={() => setSelectedIds(new Set())}
-          onDone={() => { setSelectedIds(new Set()); setSelectMode(false); invalidate(); }}
-        />
-      )}
+      <Suspense fallback={null}>
+        {isExportOpen && <ExportDialog open={isExportOpen} onOpenChange={setIsExportOpen} />}
+        {isImportOpen && <ImportDialog open={isImportOpen} onOpenChange={setIsImportOpen} onImported={invalidate} />}
+        {isDuplicateOpen && <DuplicateFinder open={isDuplicateOpen} onOpenChange={setIsDuplicateOpen} onDeleted={invalidate} />}
+        {isBrokenOpen && <BrokenLinksChecker open={isBrokenOpen} onOpenChange={setIsBrokenOpen} onDeleted={invalidate} />}
+        {aiOpen && (
+          <AiSearch
+            bookmarks={rawBookmarks as any}
+            onSelect={b => { setSelectedBookmark(b); setAiOpen(false); }}
+            onClose={() => setAiOpen(false)}
+          />
+        )}
+        {cmdOpen && (
+          <CommandPalette
+            bookmarks={rawBookmarks as any}
+            onSelect={b => setSelectedBookmark(b)}
+            onClose={() => setCmdOpen(false)}
+            onAddBookmark={() => setIsAddOpen(true)}
+            onExport={() => setIsExportOpen(true)}
+            onImport={() => setIsImportOpen(true)}
+          />
+        )}
+        {focusMode && (
+          <FocusMode
+            bookmarks={rawBookmarks as any}
+            onClose={() => setFocusMode(false)}
+          />
+        )}
+        {selectMode && selectedIds.size > 0 && (
+          <BulkActionBar
+            selectedIds={Array.from(selectedIds)}
+            onClear={() => setSelectedIds(new Set())}
+            onDone={() => { setSelectedIds(new Set()); setSelectMode(false); invalidate(); }}
+          />
+        )}
+      </Suspense>
     </AppLayout>
   );
 }

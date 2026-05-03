@@ -27,16 +27,27 @@ router.get("/stats", async (req, res): Promise<void> => {
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-  const [totalResult] = await db.select({ value: count() }).from(bookmarksTable).where(eq(bookmarksTable.userId, userId));
-  const [favResult] = await db.select({ value: count() }).from(bookmarksTable).where(and(eq(bookmarksTable.userId, userId), eq(bookmarksTable.isFavorite, true)));
-  const [archResult] = await db.select({ value: count() }).from(bookmarksTable).where(and(eq(bookmarksTable.userId, userId), eq(bookmarksTable.isArchived, true)));
-  const [colResult] = await db.select({ value: count() }).from(collectionsTable).where(eq(collectionsTable.userId, userId));
-  const [weekResult] = await db.select({ value: count() }).from(bookmarksTable).where(and(eq(bookmarksTable.userId, userId), gte(bookmarksTable.createdAt, weekAgo)));
-  const [monthResult] = await db.select({ value: count() }).from(bookmarksTable).where(and(eq(bookmarksTable.userId, userId), gte(bookmarksTable.createdAt, monthAgo)));
-
-  const tagsResult = await db.execute(sql`SELECT COUNT(DISTINCT unnest) as count FROM (SELECT unnest(tags) FROM bookmarks WHERE user_id = ${userId}) t`);
-  const pinnedResult = await db.execute(sql`SELECT COUNT(*) as count FROM bookmarks WHERE user_id = ${userId} AND is_pinned = true`);
-  const notedResult = await db.execute(sql`SELECT COUNT(*) as count FROM bookmarks WHERE user_id = ${userId} AND note IS NOT NULL AND note != ''`);
+  const [
+    [totalResult],
+    [favResult],
+    [archResult],
+    [colResult],
+    [weekResult],
+    [monthResult],
+    tagsResult,
+    pinnedResult,
+    notedResult,
+  ] = await Promise.all([
+    db.select({ value: count() }).from(bookmarksTable).where(eq(bookmarksTable.userId, userId)),
+    db.select({ value: count() }).from(bookmarksTable).where(and(eq(bookmarksTable.userId, userId), eq(bookmarksTable.isFavorite, true))),
+    db.select({ value: count() }).from(bookmarksTable).where(and(eq(bookmarksTable.userId, userId), eq(bookmarksTable.isArchived, true))),
+    db.select({ value: count() }).from(collectionsTable).where(eq(collectionsTable.userId, userId)),
+    db.select({ value: count() }).from(bookmarksTable).where(and(eq(bookmarksTable.userId, userId), gte(bookmarksTable.createdAt, weekAgo))),
+    db.select({ value: count() }).from(bookmarksTable).where(and(eq(bookmarksTable.userId, userId), gte(bookmarksTable.createdAt, monthAgo))),
+    db.execute(sql`SELECT COUNT(DISTINCT unnest) as count FROM (SELECT unnest(tags) FROM bookmarks WHERE user_id = ${userId}) t`),
+    db.execute(sql`SELECT COUNT(*) as count FROM bookmarks WHERE user_id = ${userId} AND is_pinned = true`),
+    db.execute(sql`SELECT COUNT(*) as count FROM bookmarks WHERE user_id = ${userId} AND note IS NOT NULL AND note != ''`),
+  ]);
 
   res.json({
     totalBookmarks: Number(totalResult.value),

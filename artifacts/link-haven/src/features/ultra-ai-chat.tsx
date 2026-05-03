@@ -24,80 +24,7 @@ type Msg = {
   error?: boolean;
 };
 
-/* ─── CSS (injected once) ────────────────────────────────── */
-const CHAT_CSS = `
-@keyframes ai-dot-1 { 0%,60%,100%{transform:translateY(0);opacity:.5} 30%{transform:translateY(-7px);opacity:1} }
-@keyframes ai-dot-2 { 0%,20%,80%,100%{transform:translateY(0);opacity:.5} 50%{transform:translateY(-7px);opacity:1} }
-@keyframes ai-dot-3 { 0%,40%,100%{transform:translateY(0);opacity:.5} 70%{transform:translateY(-7px);opacity:1} }
-@keyframes ai-cursor { 0%,100%{opacity:1} 50%{opacity:0} }
-@keyframes ai-action-in { 0%{transform:scale(.82) translateY(12px) rotate(-1deg);opacity:0} 70%{transform:scale(1.03) translateY(-2px)} 100%{transform:scale(1) translateY(0);opacity:1} }
-@keyframes ai-msg-r { 0%{transform:translateX(28px) scale(.9);opacity:0} 100%{transform:translateX(0) scale(1);opacity:1} }
-@keyframes ai-msg-l { 0%{transform:translateX(-28px) scale(.9);opacity:0} 100%{transform:translateX(0) scale(1);opacity:1} }
-@keyframes ai-orb-1 { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(40px,-25px) scale(1.12)} 66%{transform:translate(-25px,30px) scale(.9)} }
-@keyframes ai-orb-2 { 0%,100%{transform:translate(0,0) scale(1)} 40%{transform:translate(-45px,30px) scale(1.15)} 75%{transform:translate(30px,-18px) scale(.88)} }
-@keyframes ai-orb-3 { 0%,100%{transform:translate(0,0) scale(1)} 55%{transform:translate(20px,35px) scale(1.08)} }
-@keyframes ai-stats-in { 0%{transform:translateY(-8px);opacity:0} 100%{transform:translateY(0);opacity:1} }
-@keyframes ai-ping { 0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.5)} 50%{box-shadow:0 0 0 6px rgba(34,197,94,0)} }
-@keyframes ai-send { 0%{transform:scale(1)} 35%{transform:scale(.78)} 70%{transform:scale(1.08)} 100%{transform:scale(1)} }
-@keyframes ai-shimmer { 0%{background-position:200% center} 100%{background-position:-200% center} }
-@keyframes ai-bg-pulse { 0%,100%{opacity:.7} 50%{opacity:1} }
-@keyframes ai-suggestion-in { 0%{transform:translateY(10px);opacity:0} 100%{transform:translateY(0);opacity:1} }
-@keyframes ai-ring-spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
-@keyframes ai-ring-spin-rev { 0%{transform:rotate(0deg)} 100%{transform:rotate(-360deg)} }
-@keyframes ai-burst { 0%{transform:scale(0.6);opacity:1} 100%{transform:scale(2.2);opacity:0} }
-@keyframes ai-backdrop-glow { 0%,100%{opacity:.45} 50%{opacity:.7} }
-@keyframes ai-border-glow { 0%,100%{opacity:.5} 50%{opacity:1} }
-
-._ai-d1 { animation: ai-dot-1 1.4s ease-in-out infinite; }
-._ai-d2 { animation: ai-dot-2 1.4s ease-in-out infinite; }
-._ai-d3 { animation: ai-dot-3 1.4s ease-in-out infinite; }
-._ai-cur { display:inline-block; width:2px; height:.9em; background:rgba(139,92,246,.9); margin-left:2px; border-radius:1px; vertical-align:-.05em; animation: ai-cursor .85s ease-in-out infinite; }
-._ai-act { animation: ai-action-in .45s cubic-bezier(.22,1,.36,1) both; }
-._ai-mr  { animation: ai-msg-r  .38s cubic-bezier(.22,1,.36,1) both; }
-._ai-ml  { animation: ai-msg-l  .38s cubic-bezier(.22,1,.36,1) both; }
-._ai-o1  { animation: ai-orb-1  9s  ease-in-out infinite; }
-._ai-o2  { animation: ai-orb-2  13s ease-in-out infinite; }
-._ai-o3  { animation: ai-orb-3  17s ease-in-out infinite; }
-._ai-stats { animation: ai-stats-in .28s ease both; }
-._ai-ping  { animation: ai-ping  2.2s ease-in-out infinite; }
-._ai-send  { animation: ai-send  .32s cubic-bezier(.22,1,.36,1) both; }
-._ai-bgp   { animation: ai-bg-pulse 6s ease-in-out infinite; }
-._ai-sugg  { animation: ai-suggestion-in .4s cubic-bezier(.22,1,.36,1) both; }
-._ai-ring1 { animation: ai-ring-spin 4s linear infinite; }
-._ai-ring2 { animation: ai-ring-spin-rev 6s linear infinite; }
-._ai-burst { animation: ai-burst .65s cubic-bezier(.22,1,.36,1) both; }
-._ai-bglow { animation: ai-backdrop-glow 5s ease-in-out infinite; }
-._ai-bdglow { animation: ai-border-glow 3s ease-in-out infinite; }
-
-._ai-msg-text {
-  text-shadow: 0 0 20px rgba(0,0,0,1), 0 2px 8px rgba(0,0,0,1), 0 1px 2px rgba(0,0,0,1);
-  color: #fff;
-  font-weight: 450;
-}
-._ai-msg-text strong { color: #fff; font-weight: 700; }
-._ai-msg-text em { color: #e0e0ff; }
-._ai-glass-ui {
-  text-shadow: 0 0 16px rgba(0,0,0,1), 0 1px 4px rgba(0,0,0,1);
-}
-
-._ai-title {
-  background: linear-gradient(90deg,#818cf8 0%,#a78bfa 25%,#67e8f9 50%,#a78bfa 75%,#818cf8 100%);
-  background-size: 200% auto;
-  animation: ai-shimmer 3.5s linear infinite;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-._ai-code {
-  background: rgba(139,92,246,.15);
-  border: 1px solid rgba(139,92,246,.2);
-  padding: 1px 5px;
-  border-radius: 5px;
-  color: #a78bfa;
-  font-size: .88em;
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-}
-`;
+/* CSS is in index.css under /* ─── Haven AI chat ─── */
 
 /* ─── Helpers ─────────────────────────────────────────────── */
 function genId() { return Math.random().toString(36).slice(2); }
@@ -278,7 +205,6 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
   const [lastStats, setLastStats] = useState<ChatStats | null>(null);
   const [ping, setPing] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
-  const [styleInjected, setStyleInjected] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -286,15 +212,6 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
   const abortRef = useRef<AbortController | null>(null);
   const historyRef = useRef<Array<{ role: string; parts: Array<{ text: string }> }>>([]);
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    if (!styleInjected) {
-      const style = document.createElement("style");
-      style.textContent = CHAT_CSS;
-      document.head.appendChild(style);
-      setStyleInjected(true);
-    }
-  }, [styleInjected]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
