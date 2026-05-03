@@ -500,14 +500,16 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
           width: "min(560px, calc(100vw - 32px))",
           height: "min(720px, calc(100vh - 56px))",
           borderRadius: 24,
-          background: "transparent",
+          background: "rgba(6,4,20,0.52)",
+          backdropFilter: "blur(48px) saturate(1.9) brightness(1.08)",
+          WebkitBackdropFilter: "blur(48px) saturate(1.9) brightness(1.08)",
           boxShadow: [
-            "0 0 0 1px rgba(139,92,246,.25)",
-            "0 0 0 2px rgba(99,102,241,.09)",
-            "0 32px 80px rgba(0,0,0,.78)",
-            "0 12px 40px rgba(99,102,241,.2)",
-            "0 4px 12px rgba(0,0,0,.65)",
-            "inset 0 1px 0 rgba(255,255,255,.07)",
+            "0 0 0 1px rgba(139,92,246,.28)",
+            "0 0 0 2px rgba(99,102,241,.1)",
+            "0 32px 80px rgba(0,0,0,.72)",
+            "0 12px 40px rgba(99,102,241,.22)",
+            "0 4px 12px rgba(0,0,0,.5)",
+            "inset 0 1px 0 rgba(255,255,255,.09)",
           ].join(", "),
         }}
         onClick={e => e.stopPropagation()}
@@ -544,7 +546,7 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
         <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 1, borderRadius: 24 }}>
           <div style={{
             position: "absolute", inset: 0, borderRadius: 24,
-            background: "radial-gradient(ellipse at 20% 90%, rgba(99,102,241,.22) 0%, transparent 50%), radial-gradient(ellipse at 85% 8%, rgba(139,92,246,.18) 0%, transparent 45%), radial-gradient(ellipse at 50% 50%, rgba(6,182,212,.05) 0%, transparent 65%), radial-gradient(ellipse at 2% 2%, rgba(236,72,153,.07) 0%, transparent 38%), #040412",
+            background: "radial-gradient(ellipse at 20% 90%, rgba(99,102,241,.28) 0%, transparent 50%), radial-gradient(ellipse at 85% 8%, rgba(139,92,246,.22) 0%, transparent 45%), radial-gradient(ellipse at 50% 50%, rgba(6,182,212,.07) 0%, transparent 65%), radial-gradient(ellipse at 2% 2%, rgba(236,72,153,.09) 0%, transparent 38%)",
           }} />
           <div className="_ai-o1 _ai-bgp absolute rounded-full pointer-events-none"
             style={{ width: 320, height: 320, top: "5%", left: "-12%", background: "radial-gradient(circle, rgba(99,102,241,.2) 0%, transparent 70%)", filter: "blur(50px)" }} />
@@ -560,7 +562,7 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
 
           {/* Header */}
           <div className="shrink-0 px-4 pt-4 pb-3 border-b border-white/[0.07]"
-            style={{ background: "linear-gradient(180deg, rgba(10,8,28,.9) 0%, rgba(6,5,18,.75) 100%)", backdropFilter: "blur(20px)", borderRadius: "24px 24px 0 0" }}>
+            style={{ background: "linear-gradient(180deg, rgba(10,8,28,.45) 0%, rgba(6,5,18,.25) 100%)", borderRadius: "24px 24px 0 0" }}>
             <div className="flex items-center gap-3">
               {/* Bot orb */}
               <div className="relative">
@@ -700,7 +702,7 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
 
           {/* Input */}
           <div className="shrink-0 p-4 border-t border-white/[0.07]"
-            style={{ background: "linear-gradient(0deg, rgba(4,4,18,.98) 0%, rgba(6,5,18,.8) 100%)", backdropFilter: "blur(20px)", borderRadius: "0 0 24px 24px" }}>
+            style={{ background: "linear-gradient(0deg, rgba(4,4,18,.5) 0%, rgba(6,5,18,.28) 100%)", borderRadius: "0 0 24px 24px" }}>
             <div className="flex gap-2.5 items-end">
               <div className="relative flex-1">
                 <textarea
