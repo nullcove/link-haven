@@ -195,9 +195,9 @@ function SidebarAvatarRow({ user }: { user: User }) {
   );
 }
 
-interface AppSidebarProps { user: User; onOpenGemini?: () => void; }
+interface AppSidebarProps { user: User; onOpenGemini?: () => void; bgActive?: boolean; }
 
-export function AppSidebar({ user, onOpenGemini }: AppSidebarProps) {
+export function AppSidebar({ user, onOpenGemini, bgActive = false }: AppSidebarProps) {
   const [location, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [newColName, setNewColName] = useState("");
@@ -244,7 +244,13 @@ export function AppSidebar({ user, onOpenGemini }: AppSidebarProps) {
   ];
 
   return (
-    <Sidebar className="border-r border-white/[0.06] bg-[#09090f] w-[220px] shrink-0">
+    <Sidebar
+      className="border-r border-white/[0.06] w-[220px] shrink-0"
+      style={bgActive
+        ? { background: "rgba(7,7,14,.78)", backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)" }
+        : { background: "#09090f" }
+      }
+    >
       <style dangerouslySetInnerHTML={{ __html: ICON_CSS }} />
 
       <SidebarHeader className="px-4 py-4 border-b border-white/[0.06]">

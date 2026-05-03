@@ -102,7 +102,7 @@ export default function CollectionPage() {
   return (
     <AppLayout>
       {/* Toolbar */}
-      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/[0.06] bg-[#09090f]/95 backdrop-blur sticky top-0 z-10 shrink-0">
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/[0.06] sticky top-0 z-10 shrink-0" style={{ background: "rgba(7,7,14,.88)", backdropFilter: "blur(20px)" }}>
         <div className="flex items-center gap-2 shrink-0">
           <div className="size-3.5 rounded-full shrink-0" style={{ backgroundColor: colColor }} />
           <h1 className="text-[13px] font-semibold text-white/75">{collection?.name || "Collection"}</h1>

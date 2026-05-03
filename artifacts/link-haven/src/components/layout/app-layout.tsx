@@ -58,20 +58,32 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <SidebarProvider defaultOpen={true}>
+      {/* Root — background image fills the whole screen */}
       <div
         className="flex min-h-screen w-full text-foreground relative"
         style={{
           background: bgPath
-            ? `linear-gradient(rgba(7,7,14,.84),rgba(7,7,14,.84)), url(${bgPath}) center/cover fixed`
+            ? `url(${bgPath}) center/cover fixed`
             : "#080810",
         }}
       >
-        <AppSidebar user={user} onOpenGemini={() => setGeminiOpen(v => !v)} />
-        <SidebarInset className="flex-1 overflow-hidden">
-          <main className="flex flex-col h-[100dvh] overflow-hidden">
-            {children}
-          </main>
-        </SidebarInset>
+        {/* Dark overlay so text stays readable, but image is visible */}
+        {bgPath && (
+          <div
+            className="fixed inset-0 pointer-events-none"
+            style={{ background: "rgba(5,5,12,.58)", zIndex: 0 }}
+          />
+        )}
+
+        {/* Sidebar and content sit above the overlay */}
+        <div className="relative flex w-full min-h-screen" style={{ zIndex: 1 }}>
+          <AppSidebar user={user} onOpenGemini={() => setGeminiOpen(v => !v)} bgActive={!!bgPath} />
+          <SidebarInset className="flex-1 overflow-hidden">
+            <main className="flex flex-col h-[100dvh] overflow-hidden">
+              {children}
+            </main>
+          </SidebarInset>
+        </div>
       </div>
       {geminiOpen && (
         <GeminiChat onClose={() => setGeminiOpen(false)} bookmarks={allBookmarks as any} />

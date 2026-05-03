@@ -23,7 +23,7 @@ export default function AnalyticsPage() {
         <span className="ml-3 text-[12px] text-white/25">{bookmarks.length} bookmarks</span>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-6 bg-[#0a0a0c] space-y-6">
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
         <AnalyticsDashboard bookmarks={bookmarks as any} />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">

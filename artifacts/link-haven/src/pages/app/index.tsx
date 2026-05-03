@@ -143,7 +143,7 @@ export default function AppPage() {
   return (
     <AppLayout>
       {/* ── Toolbar ─────────────────────────────────── */}
-      <div className="relative flex items-center gap-2 px-4 py-2.5 border-b border-white/[0.06] bg-[#09090f]/95 backdrop-blur sticky top-0 z-20 shrink-0">
+      <div className="relative flex items-center gap-2 px-4 py-2.5 border-b border-white/[0.06] sticky top-0 z-20 shrink-0" style={{ background: "rgba(7,7,14,.88)", backdropFilter: "blur(20px)" }}>
         {/* Title */}
         <div className="flex items-center gap-2 min-w-0 shrink-0">
           <h1 className="text-[13px] font-semibold text-white/75 truncate">{pageTitle}</h1>
@@ -323,7 +323,7 @@ export default function AppPage() {
       )}
 
       {/* ── Content ─────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto" style={{ background: "transparent" }}>
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <div className="size-6 rounded-full border-2 border-indigo-500/30 border-t-indigo-500 animate-spin" />
