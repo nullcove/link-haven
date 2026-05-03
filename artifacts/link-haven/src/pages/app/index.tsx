@@ -128,6 +128,8 @@ export default function AppPage() {
         const err = await resp.json() as any;
         throw new Error(err.error || "Summarization failed");
       }
+      const updated = await resp.json();
+      if (selectedBookmark?.id === id) setSelectedBookmark(updated);
       invalidate();
     } finally {
       clearTimeout(timer);
