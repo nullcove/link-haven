@@ -69,6 +69,15 @@ const CHAT_CSS = `
 ._ai-bglow { animation: ai-backdrop-glow 5s ease-in-out infinite; }
 ._ai-bdglow { animation: ai-border-glow 3s ease-in-out infinite; }
 
+._ai-msg-text {
+  text-shadow: 0 1px 14px rgba(0,0,0,.85), 0 1px 4px rgba(0,0,0,.6);
+}
+._ai-msg-text strong { color: #fff; text-shadow: 0 1px 14px rgba(0,0,0,.9); }
+._ai-msg-text em { color: rgba(255,255,255,.9); }
+._ai-glass-ui {
+  text-shadow: 0 1px 8px rgba(0,0,0,.7), 0 1px 3px rgba(0,0,0,.5);
+}
+
 ._ai-title {
   background: linear-gradient(90deg,#818cf8 0%,#a78bfa 25%,#67e8f9 50%,#a78bfa 75%,#818cf8 100%);
   background-size: 200% auto;
@@ -154,8 +163,8 @@ function ThinkingBubble() {
   return (
     <div className="flex gap-2.5 mb-4 _ai-ml">
       <BotOrb />
-      <div className="bg-white/[0.09] border border-white/[0.12] rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-3">
-        <span className="text-[11px] text-violet-300/60 font-semibold tracking-wide">Thinking</span>
+      <div className="rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-3">
+        <span className="text-[11px] text-violet-300 font-semibold tracking-wide _ai-glass-ui">Thinking</span>
         <div className="flex items-center gap-1.5">
           <span className="size-[7px] rounded-full bg-violet-400 _ai-d1" />
           <span className="size-[7px] rounded-full bg-indigo-400 _ai-d2" />
@@ -217,12 +226,12 @@ function MsgBubble({ msg, userLetter }: { msg: Msg; userLetter: string }) {
         <div className={cn(
           "rounded-2xl px-4 py-2.5 text-[13px] leading-relaxed",
           isUser
-            ? "bg-indigo-500/[0.22] border border-indigo-400/[0.28] text-white rounded-tr-sm"
+            ? "bg-indigo-500/[0.18] border border-indigo-400/[0.22] text-white rounded-tr-sm"
             : msg.error
-              ? "bg-red-500/[0.1] border border-red-400/[0.22] text-red-200/90 rounded-tl-sm"
-              : "bg-white/[0.1] border border-white/[0.14] text-white/92 rounded-tl-sm"
+              ? "text-red-200/90 rounded-tl-sm"
+              : "text-white/95 rounded-tl-sm"
         )}>
-          {html ? <span dangerouslySetInnerHTML={{ __html: html }} /> : null}
+          {html ? <span className="_ai-msg-text" dangerouslySetInnerHTML={{ __html: html }} /> : null}
           {msg.streaming && <span className="_ai-cur" />}
         </div>
         {msg.actions && msg.actions.length > 0 && (
@@ -560,9 +569,9 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
               <div className="flex-1 min-w-0">
                 <h2 className="_ai-title text-[17px] font-black tracking-tight">Haven AI</h2>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-[10px] text-white/30 font-mono">gemini-2.0-flash</span>
-                  <span className="size-0.5 rounded-full bg-white/15" />
-                  <span className="text-[10px] text-white/30">Full library access</span>
+                  <span className="text-[10px] text-white/60 font-mono _ai-glass-ui">gemini-2.0-flash</span>
+                  <span className="size-0.5 rounded-full bg-white/30" />
+                  <span className="text-[10px] text-white/60 _ai-glass-ui">Full library access</span>
                   {ping !== null && (
                     <>
                       <span className="size-0.5 rounded-full bg-white/15" />
@@ -669,13 +678,13 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
                 transition={{ duration: 0.25 }}
                 className="px-4 pb-3"
               >
-                <p className="text-[9.5px] font-black uppercase tracking-[0.15em] text-white/15 mb-2">Try asking</p>
+                <p className="text-[9.5px] font-black uppercase tracking-[0.15em] text-white/55 mb-2 _ai-glass-ui">Try asking</p>
                 <div className="flex flex-wrap gap-1.5">
                   {SUGGESTIONS.map((s, i) => (
                     <button
                       key={s.text}
                       onClick={() => send(s.text)}
-                      className="_ai-sugg flex items-center gap-1.5 text-[11px] bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.12] hover:border-white/[0.22] text-white/60 hover:text-white/90 rounded-xl px-2.5 py-1.5 transition-all text-left"
+                      className="_ai-sugg _ai-glass-ui flex items-center gap-1.5 text-[11px] bg-white/[0.08] hover:bg-white/[0.15] border border-white/[0.14] hover:border-white/[0.28] text-white/75 hover:text-white rounded-xl px-2.5 py-1.5 transition-all text-left"
                       style={{ animationDelay: `${i * 45}ms` }}
                     >
                       <span className="text-white/20">{s.icon}</span>
@@ -744,7 +753,7 @@ export function UltraAiChat({ onClose, userLetter = "U", onRefresh }: UltraAiCha
             </div>
 
             <div className="flex items-center justify-between mt-2.5 px-0.5">
-              <p className="text-[10px] text-white/15 font-mono">⌘J to toggle · Esc to close · Enter to send</p>
+              <p className="text-[10px] text-white/55 font-mono _ai-glass-ui">⌘J to toggle · Esc to close · Enter to send</p>
               {copied && <span className="text-[10px] text-emerald-400 font-medium">Copied!</span>}
             </div>
           </div>
