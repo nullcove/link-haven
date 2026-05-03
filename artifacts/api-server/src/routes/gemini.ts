@@ -121,6 +121,51 @@ function geminiHistoryToOpenAI(history: any[]): Array<{ role: string; content: s
   }));
 }
 
+/* ── Ollama native /api/chat streaming ─────────────────────── */
+async function streamOllama(
+  baseUrl: string, model: string,
+  messages: Array<{ role: string; content: string }>,
+  onChunk: (text: string) => void
+): Promise<{ inputTokens: number; outputTokens: number }> {
+  const cleanBase = baseUrl.replace(/\/$/, "");
+  const resp = await fetch(`${cleanBase}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model, messages, stream: true }),
+  });
+  if (!resp.ok) {
+    let errMsg = `Ollama error ${resp.status}`;
+    try {
+      const body = await resp.text();
+      try { const p = JSON.parse(body) as any; errMsg = p?.error || body || errMsg; }
+      catch { errMsg = body || errMsg; }
+    } catch { /* ignore */ }
+    throw new Error(errMsg);
+  }
+  const reader = resp.body!.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  let inputTokens = 0, outputTokens = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const lines = buf.split("\n");
+    buf = lines.pop() || "";
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      try {
+        const d = JSON.parse(trimmed);
+        const chunk = d?.message?.content;
+        if (chunk) onChunk(chunk);
+        if (d?.done && d?.prompt_eval_count) { inputTokens = d.prompt_eval_count || 0; outputTokens = d.eval_count || 0; }
+      } catch { /* ignore */ }
+    }
+  }
+  return { inputTokens, outputTokens };
+}
+
 async function callGemini(apiKey: string, contents: any[], systemInstruction?: string) {
   const body: any = { contents };
   if (systemInstruction) {
@@ -515,6 +560,18 @@ ${bookmarkCtx || "Library is empty"}`;
           } catch { /* ignore */ }
         }
       }
+    } else if (providerInfo.provider === "ollama") {
+      const ollamaMessages = [
+        { role: "system", content: systemInstruction },
+        ...geminiHistoryToOpenAI(history),
+        { role: "user", content: message },
+      ];
+      const usage = await streamOllama(
+        providerInfo.baseUrl!, activeModel, ollamaMessages,
+        (chunk) => { fullText += chunk; send("chunk", { text: chunk }); }
+      );
+      inputTokens = usage.inputTokens;
+      outputTokens = usage.outputTokens;
     } else {
       const oaiMessages = [
         { role: "system" as const, content: systemInstruction },
