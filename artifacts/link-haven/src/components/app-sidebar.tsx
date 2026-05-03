@@ -26,10 +26,24 @@ const COL_COLORS = [
   "#ef4444","#06b6d4","#84cc16","#f97316","#14b8a6",
 ];
 
-interface AppSidebarProps {
-  user: User;
-  onOpenGemini?: () => void;
+/* ─── 3D nav icon chip ─────────────────────────────────────── */
+function NavIcon({ icon: Icon, color, size = 20 }: { icon: React.ElementType; color: string; size?: number }) {
+  return (
+    <span
+      className="flex items-center justify-center shrink-0 rounded-[7px]"
+      style={{
+        width: size, height: size,
+        background: `linear-gradient(145deg, ${color}38, ${color}14)`,
+        border: `1px solid ${color}30`,
+        boxShadow: `0 1px 6px ${color}22, 0 0 0 0.5px ${color}18, inset 0 1px 0 rgba(255,255,255,.09), inset 0 -1px 0 rgba(0,0,0,.15)`,
+      }}
+    >
+      <Icon style={{ width: size * 0.54, height: size * 0.54, color, strokeWidth: 2 }} />
+    </span>
+  );
 }
+
+interface AppSidebarProps { user: User; onOpenGemini?: () => void; }
 
 export function AppSidebar({ user, onOpenGemini }: AppSidebarProps) {
   const [location, setLocation] = useLocation();
@@ -47,8 +61,7 @@ export function AppSidebar({ user, onOpenGemini }: AppSidebarProps) {
 
   const handleLogout = async () => {
     try { await logoutMutation.mutateAsync(); } catch {}
-    clearAuthToken();
-    setLocation("/");
+    clearAuthToken(); setLocation("/");
   };
 
   const handleCreateCol = async (e: React.FormEvent) => {
@@ -56,8 +69,7 @@ export function AppSidebar({ user, onOpenGemini }: AppSidebarProps) {
     if (!newColName.trim()) return;
     await createColMutation.mutateAsync({ data: { name: newColName.trim() } });
     queryClient.invalidateQueries({ queryKey: getListCollectionsQueryKey() });
-    setNewColName("");
-    setShowNewCol(false);
+    setNewColName(""); setShowNewCol(false);
   };
 
   const qs = typeof window !== "undefined" ? window.location.search : "";
@@ -65,6 +77,19 @@ export function AppSidebar({ user, onOpenGemini }: AppSidebarProps) {
     if (href.includes("?")) return qs === href.slice(href.indexOf("?")) && location === "/app";
     return location === href && !qs;
   };
+
+  const libraryItems = [
+    { href: "/app",                label: "All Bookmarks", icon: Bookmark, color: "#6366f1", count: stats?.totalBookmarks },
+    { href: "/app?view=favorites", label: "Favourites",    icon: Star,     color: "#f59e0b", count: stats?.totalFavorites },
+    { href: "/app?view=pinned",    label: "Pinned",        icon: Pin,      color: "#8b5cf6", count: null },
+    { href: "/app?view=archive",   label: "Archive",       icon: Archive,  color: "#64748b", count: stats?.totalArchived },
+  ];
+
+  const discoverItems = [
+    { href: "/analytics",          label: "Analytics",    icon: BarChart3, color: "#06b6d4" },
+    { href: "/app?view=recent",    label: "Recent",       icon: Clock,     color: "#f97316" },
+    { href: "/app?view=domains",   label: "By Domain",    icon: Globe,     color: "#3b82f6" },
+  ];
 
   return (
     <Sidebar className="border-r border-white/[0.06] bg-[#09090f] w-[220px] shrink-0">
@@ -84,16 +109,11 @@ export function AppSidebar({ user, onOpenGemini }: AppSidebarProps) {
           <p className="text-[10px] font-semibold text-white/20 uppercase tracking-[0.12em] px-2 mb-1.5">Library</p>
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
-              {[
-                { href: "/app", label: "All Bookmarks", icon: Bookmark, count: stats?.totalBookmarks },
-                { href: "/app?view=favorites", label: "Favourites", icon: Star, count: stats?.totalFavorites },
-                { href: "/app?view=pinned", label: "Pinned", icon: Pin, count: null },
-                { href: "/app?view=archive", label: "Archive", icon: Archive, count: stats?.totalArchived },
-              ].map(({ href, label, icon: Icon, count }) => (
+              {libraryItems.map(({ href, label, icon, color, count }) => (
                 <SidebarMenuItem key={href}>
                   <SidebarMenuButton asChild isActive={isActive(href)} className="rounded-lg h-8 px-2 text-[13px]">
                     <Link href={href} className="flex items-center gap-2.5">
-                      <Icon className="size-3.5 shrink-0" />
+                      <NavIcon icon={icon} color={color} />
                       <span className="flex-1 truncate">{label}</span>
                       {count != null && <span className="text-[11px] tabular-nums opacity-40">{count}</span>}
                     </Link>
@@ -109,15 +129,11 @@ export function AppSidebar({ user, onOpenGemini }: AppSidebarProps) {
           <p className="text-[10px] font-semibold text-white/20 uppercase tracking-[0.12em] px-2 mb-1.5">Discover</p>
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
-              {[
-                { href: "/analytics", label: "Analytics", icon: BarChart3 },
-                { href: "/app?view=recent", label: "Recent", icon: Clock },
-                { href: "/app?view=domains", label: "By Domain", icon: Globe },
-              ].map(({ href, label, icon: Icon }) => (
+              {discoverItems.map(({ href, label, icon, color }) => (
                 <SidebarMenuItem key={href}>
                   <SidebarMenuButton asChild isActive={isActive(href)} className="rounded-lg h-8 px-2 text-[13px]">
                     <Link href={href} className="flex items-center gap-2.5">
-                      <Icon className="size-3.5 shrink-0" />
+                      <NavIcon icon={icon} color={color} />
                       <span className="flex-1 truncate">{label}</span>
                     </Link>
                   </SidebarMenuButton>
@@ -134,8 +150,9 @@ export function AppSidebar({ user, onOpenGemini }: AppSidebarProps) {
               onClick={onOpenGemini}
               className="w-full flex items-center gap-2.5 px-2 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600/[0.12] to-violet-600/[0.08] border border-indigo-500/20 hover:from-indigo-600/[0.22] hover:border-indigo-500/35 transition-all group"
             >
-              <div className="size-6 rounded-md bg-gradient-to-br from-indigo-500/30 to-violet-500/20 border border-indigo-500/25 flex items-center justify-center shrink-0">
-                <Brain className="size-3.5 text-indigo-400" />
+              <div className="size-[22px] rounded-[7px] flex items-center justify-center shrink-0"
+                style={{ background: "linear-gradient(145deg,rgba(139,92,246,.4),rgba(99,102,241,.2))", border: "1px solid rgba(139,92,246,.35)", boxShadow: "0 1px 6px rgba(139,92,246,.25), inset 0 1px 0 rgba(255,255,255,.1), inset 0 -1px 0 rgba(0,0,0,.2)" }}>
+                <Brain className="size-3 text-violet-300" strokeWidth={2} />
               </div>
               <span className="text-[12px] font-semibold text-indigo-300 group-hover:text-indigo-200 flex-1 text-left">AI Assistant</span>
               <Sparkles className="size-3 text-indigo-400/50 group-hover:text-indigo-400 transition-colors" />
@@ -179,7 +196,14 @@ export function AppSidebar({ user, onOpenGemini }: AppSidebarProps) {
                         {col.icon ? (
                           <span className="text-[13px] leading-none">{col.icon}</span>
                         ) : (
-                          <div className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: col.color || COL_COLORS[i % COL_COLORS.length] }} />
+                          <span className="size-[20px] rounded-[7px] flex items-center justify-center shrink-0"
+                            style={{
+                              background: `linear-gradient(145deg, ${col.color || COL_COLORS[i % COL_COLORS.length]}35, ${col.color || COL_COLORS[i % COL_COLORS.length]}12)`,
+                              border: `1px solid ${col.color || COL_COLORS[i % COL_COLORS.length]}28`,
+                              boxShadow: `0 1px 5px ${col.color || COL_COLORS[i % COL_COLORS.length]}18, inset 0 1px 0 rgba(255,255,255,.07)`,
+                            }}>
+                            <span className="size-1.5 rounded-full" style={{ backgroundColor: col.color || COL_COLORS[i % COL_COLORS.length] }} />
+                          </span>
                         )}
                         <span className="flex-1 truncate">{col.name}</span>
                         <span className="text-[11px] tabular-nums opacity-40">{(col as any).bookmarkCount}</span>
@@ -218,9 +242,12 @@ export function AppSidebar({ user, onOpenGemini }: AppSidebarProps) {
         )}
       </SidebarContent>
 
+      {/* Footer */}
       <SidebarFooter className="border-t border-white/[0.06] p-3">
+        {/* User card */}
         <div className="flex items-center gap-2.5 px-1 py-2 mb-1">
-          <div className="size-7 rounded-full bg-indigo-600/20 border border-indigo-500/25 flex items-center justify-center text-[11px] font-bold text-indigo-300 uppercase shrink-0">
+          <div className="size-7 rounded-full border-2 flex items-center justify-center text-[11px] font-bold text-indigo-200 uppercase shrink-0"
+            style={{ background: "linear-gradient(145deg,rgba(99,102,241,.35),rgba(139,92,246,.18))", borderColor: "rgba(99,102,241,.3)", boxShadow: "0 2px 8px rgba(99,102,241,.2), inset 0 1px 0 rgba(255,255,255,.1)" }}>
             {user.name.substring(0, 2)}
           </div>
           <div className="flex-1 min-w-0">
@@ -228,24 +255,35 @@ export function AppSidebar({ user, onOpenGemini }: AppSidebarProps) {
             <p className="text-[11px] text-white/30 mt-0.5 truncate">{user.isGuest ? "Guest session" : user.email}</p>
           </div>
         </div>
+
         <SidebarMenu className="gap-0.5">
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={location === "/ai-settings"} className="rounded-lg h-8 px-2 text-[13px]">
               <Link href="/ai-settings" className="flex items-center gap-2.5">
-                <Bot className="size-3.5 shrink-0 text-indigo-400" /><span className="text-indigo-300/80">AI Models</span>
+                <NavIcon icon={Bot} color="#a855f7" />
+                <span className="text-indigo-300/75">AI Models</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={location === "/settings"} className="rounded-lg h-8 px-2 text-[13px]">
               <Link href="/settings" className="flex items-center gap-2.5">
-                <Settings className="size-3.5 shrink-0" /><span>Settings</span>
+                <NavIcon icon={Settings} color="#94a3b8" />
+                <span>Settings</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleLogout} className="rounded-lg h-8 px-2 text-[13px] text-white/40 hover:text-red-400 hover:bg-red-500/[0.06]">
-              <LogOut className="size-3.5 shrink-0" /><span>Sign out</span>
+            <SidebarMenuButton
+              onClick={handleLogout}
+              className="rounded-lg h-8 px-2 text-[13px] text-white/40 hover:text-red-400 hover:bg-red-500/[0.06] group/logout">
+              <span className="flex items-center gap-2.5 w-full">
+                <span className="size-[20px] rounded-[7px] flex items-center justify-center shrink-0 transition-all"
+                  style={{ background: "linear-gradient(145deg,rgba(239,68,68,.25),rgba(239,68,68,.1))", border: "1px solid rgba(239,68,68,.22)", boxShadow: "0 1px 5px rgba(239,68,68,.15), inset 0 1px 0 rgba(255,255,255,.06)" }}>
+                  <LogOut className="size-2.5 text-red-400/70" strokeWidth={2} style={{ width: 11, height: 11 }} />
+                </span>
+                Sign out
+              </span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
