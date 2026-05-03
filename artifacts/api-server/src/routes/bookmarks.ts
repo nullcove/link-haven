@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, bookmarksTable, collectionsTable, sessionsTable } from "@workspace/db";
+import { db, bookmarksTable, collectionsTable, sessionsTable, userSettingsTable } from "@workspace/db";
 import { eq, and, ilike, or, sql, inArray } from "drizzle-orm";
 import {
   CreateBookmarkBody,
@@ -243,6 +243,61 @@ router.post("/bookmarks/bulk-update", async (req, res): Promise<void> => {
   res.json({ updated: ids.length });
 });
 
+/* ─── AUTO-SUMMARIZE HELPERS ────────────────────────────── */
+async function scrapeWithJina(url: string): Promise<string> {
+  const jinaUrl = `https://r.jina.ai/${url}`;
+  const resp = await fetch(jinaUrl, {
+    headers: { "Accept": "text/plain", "X-No-Cache": "true" },
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!resp.ok) throw new Error(`Jina fetch failed: ${resp.status}`);
+  const text = await resp.text();
+  return text.slice(0, 12000);
+}
+
+async function getActiveAiKey(userId: number): Promise<{ provider: string; key: string } | null> {
+  const [s] = await db.select().from(userSettingsTable).where(eq(userSettingsTable.userId, userId));
+  if (!s) return null;
+  if (s.geminiApiKey) return { provider: "gemini", key: s.geminiApiKey };
+  if ((s as any).openaiApiKey) return { provider: "openai", key: (s as any).openaiApiKey };
+  if ((s as any).openrouterApiKey) return { provider: "openrouter", key: (s as any).openrouterApiKey };
+  return null;
+}
+
+async function summarizeText(provider: string, key: string, pageText: string, pageTitle: string): Promise<string> {
+  const prompt = `You are a smart bookmark note-taker. Given the following web page content, write a concise, well-structured summary note in 3-5 sentences. Focus on: what the page is about, key points, and why it might be useful to save. Be clear and informative. Page title: "${pageTitle}"\n\nContent:\n${pageText}`;
+
+  if (provider === "gemini") {
+    const body = {
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.5, maxOutputTokens: 512 },
+    };
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(20000) }
+    );
+    const data = await resp.json() as any;
+    if (!resp.ok) throw new Error(data?.error?.message || "Gemini error");
+    return data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+  }
+
+  if (provider === "openai" || provider === "openrouter") {
+    const baseUrl = provider === "openrouter" ? "https://openrouter.ai/api/v1" : "https://api.openai.com/v1";
+    const model = provider === "openrouter" ? "openai/gpt-4o-mini" : "gpt-4o-mini";
+    const resp = await fetch(`${baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+      body: JSON.stringify({ model, messages: [{ role: "user", content: prompt }], max_tokens: 512, temperature: 0.5 }),
+      signal: AbortSignal.timeout(20000),
+    });
+    const data = await resp.json() as any;
+    if (!resp.ok) throw new Error(data?.error?.message || "OpenAI error");
+    return data?.choices?.[0]?.message?.content ?? "";
+  }
+
+  return "";
+}
+
 /* ─── CREATE ────────────────────────────────────────────── */
 router.post("/bookmarks", async (req, res): Promise<void> => {
   const token = getToken(req);
@@ -258,6 +313,7 @@ router.post("/bookmarks", async (req, res): Promise<void> => {
   const favicon = getFavicon(url);
   const finalTitle = title || domain || url;
   const finalType = type || "link";
+  const autoSummarize = (req.body as any).autoSummarize === true;
 
   const [bookmark] = await db
     .insert(bookmarksTable)
@@ -266,6 +322,25 @@ router.post("/bookmarks", async (req, res): Promise<void> => {
 
   const result = await withCollectionName(bookmark);
   res.status(201).json(result);
+
+  // ── Background: scrape + summarize (non-blocking) ──────
+  if (autoSummarize && !note) {
+    (async () => {
+      try {
+        const aiCreds = await getActiveAiKey(userId);
+        if (!aiCreds) return;
+        const pageText = await scrapeWithJina(url);
+        if (!pageText || pageText.length < 100) return;
+        const summary = await summarizeText(aiCreds.provider, aiCreds.key, pageText, finalTitle);
+        if (!summary) return;
+        await db.update(bookmarksTable)
+          .set({ note: summary.trim(), updatedAt: new Date() })
+          .where(eq(bookmarksTable.id, bookmark.id));
+      } catch {
+        // silent fail — summary is best-effort
+      }
+    })();
+  }
 });
 
 /* ─── GET ONE ───────────────────────────────────────────── */
