@@ -32,12 +32,15 @@ type ProviderInfo = {
 };
 
 async function getOllamaModels(baseUrl: string): Promise<string[]> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
   try {
-    const r = await fetch(`${baseUrl}/api/tags`, { signal: AbortSignal.timeout(5000) });
+    const r = await fetch(`${baseUrl.replace(/\/$/, "")}/api/tags`, { signal: ctrl.signal });
+    clearTimeout(timer);
     if (!r.ok) return [];
     const data = await r.json() as any;
-    return (data?.models ?? []).map((m: any) => m.name as string).filter(Boolean);
-  } catch { return []; }
+    return (data?.models ?? []).map((m: any) => (m.name as string)).filter(Boolean);
+  } catch { clearTimeout(timer); return []; }
 }
 
 async function getActiveProvider(userId: number): Promise<ProviderInfo | null> {
@@ -66,14 +69,24 @@ async function streamOpenAI(
 ): Promise<{ inputTokens: number; outputTokens: number }> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (key) headers["Authorization"] = `Bearer ${key}`;
-  const resp = await fetch(`${baseUrl}/chat/completions`, {
+  const cleanBase = baseUrl.replace(/\/$/, "");
+  const resp = await fetch(`${cleanBase}/chat/completions`, {
     method: "POST",
     headers,
     body: JSON.stringify({ model, messages, stream: true, max_tokens: 3000, temperature: 0.75 }),
   });
   if (!resp.ok) {
-    const err = await resp.json() as any;
-    throw new Error(err?.error?.message || `${model} error ${resp.status}`);
+    let errMsg = `${model} error ${resp.status}`;
+    try {
+      const body = await resp.text();
+      try {
+        const parsed = JSON.parse(body) as any;
+        errMsg = parsed?.error?.message || parsed?.error || body || errMsg;
+      } catch {
+        errMsg = body || errMsg;
+      }
+    } catch { /* ignore */ }
+    throw new Error(typeof errMsg === "string" ? errMsg : JSON.stringify(errMsg));
   }
   const reader = resp.body!.getReader();
   const decoder = new TextDecoder();
@@ -94,7 +107,7 @@ async function streamOpenAI(
         const chunk = d?.choices?.[0]?.delta?.content;
         if (chunk) onChunk(chunk);
         if (d?.usage) { inputTokens = d.usage.prompt_tokens || 0; outputTokens = d.usage.completion_tokens || 0; }
-      } catch { /* ignore */ }
+      } catch { /* ignore parse errors */ }
     }
   }
   return { inputTokens, outputTokens };
