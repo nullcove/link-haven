@@ -6,11 +6,13 @@ import { getAuthToken } from "@/lib/auth";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { GeminiChat } from "@/features/gemini-chat";
 import { useListBookmarks, getListBookmarksQueryKey } from "@workspace/api-client-react";
+import { useBg } from "@/lib/background";
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const [, setLocation] = useLocation();
   const token = getAuthToken();
   const [geminiOpen, setGeminiOpen] = useState(false);
+  const { bgPath } = useBg();
 
   const { data: user, isLoading, isError } = useGetMe({
     query: { enabled: !!token, queryKey: getGetMeQueryKey() },
@@ -28,7 +30,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
     if (!isLoading && (isError || (!user && token))) setLocation("/login");
   }, [isLoading, isError, user, token, setLocation]);
 
-  // ⌘J / Ctrl+J to toggle Gemini
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "j") { e.preventDefault(); setGeminiOpen(v => !v); }
@@ -41,7 +42,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-[#080810]">
+      <div className="flex h-screen w-full items-center justify-center" style={{ background: "#080810" }}>
         <div className="flex flex-col items-center gap-5">
           <div className="relative size-12">
             <div className="absolute inset-0 rounded-full border-2 border-indigo-500/20" />
@@ -57,7 +58,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex min-h-screen w-full bg-[#080810] text-foreground">
+      <div
+        className="flex min-h-screen w-full text-foreground relative"
+        style={{
+          background: bgPath
+            ? `linear-gradient(rgba(7,7,14,.84),rgba(7,7,14,.84)), url(${bgPath}) center/cover fixed`
+            : "#080810",
+        }}
+      >
         <AppSidebar user={user} onOpenGemini={() => setGeminiOpen(v => !v)} />
         <SidebarInset className="flex-1 overflow-hidden">
           <main className="flex flex-col h-[100dvh] overflow-hidden">

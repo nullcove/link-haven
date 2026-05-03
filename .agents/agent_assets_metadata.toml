@@ -18,3 +18,63 @@ id = "WJImtIlUvlvM872b1UYSp"
 uri = "file://artifacts/link-haven/public/feature2.png"
 type = "image"
 title = "Glowing node network"
+
+[[generated]]
+id = "fxeWV10A4lOAGVVh1OXG9"
+uri = "file://artifacts/link-haven/public/backgrounds/bg01.png"
+type = "image"
+title = "space-nebula-dark"
+
+[[generated]]
+id = "ahpqow-K1caVKm6I4ih1d"
+uri = "file://artifacts/link-haven/public/backgrounds/bg02.png"
+type = "image"
+title = "cyberpunk-city-rain"
+
+[[generated]]
+id = "1K4CjWHNUCsjqCO14dpet"
+uri = "file://artifacts/link-haven/public/backgrounds/bg03.png"
+type = "image"
+title = "dark-geometry-abstract"
+
+[[generated]]
+id = "mNHolKyzGmQda0jMLhTPX"
+uri = "file://artifacts/link-haven/public/backgrounds/bg04.png"
+type = "image"
+title = "aurora-mountains-night"
+
+[[generated]]
+id = "IRt0Qbq9KO7v1fS8IZB1A"
+uri = "file://artifacts/link-haven/public/backgrounds/bg05.png"
+type = "image"
+title = "deep-ocean-bioluminescent"
+
+[[generated]]
+id = "G_c8YNQZo9eEte2WSxIcP"
+uri = "file://artifacts/link-haven/public/backgrounds/bg06.png"
+type = "image"
+title = "volcanic-lava-night"
+
+[[generated]]
+id = "W3-NKFL4ix0OydEmQfmSb"
+uri = "file://artifacts/link-haven/public/backgrounds/bg07.png"
+type = "image"
+title = "dark-forest-mist"
+
+[[generated]]
+id = "c9lMJgQ71B9_vVR4jRO48"
+uri = "file://artifacts/link-haven/public/backgrounds/bg08.png"
+type = "image"
+title = "dark-ink-fluid-abstract"
+
+[[generated]]
+id = "P33S2kPloY0_NFnGwpSlv"
+uri = "file://artifacts/link-haven/public/backgrounds/bg09.png"
+type = "image"
+title = "circuit-board-dark-tech"
+
+[[generated]]
+id = "RRvCPUhsLG_tAEH1GS9wB"
+uri = "file://artifacts/link-haven/public/backgrounds/bg10.png"
+type = "image"
+title = "milky-way-mountains-lake"

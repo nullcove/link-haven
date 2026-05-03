@@ -14,12 +14,13 @@ import {
 import {
   Bookmark, Hash, LogOut, Settings, Star, Archive,
   FolderPlus, ChevronDown, ChevronRight, BarChart3,
-  Brain, Pin, Clock, Globe, Sparkles, Bot,
+  Brain, Pin, Clock, Globe, Sparkles,
 } from "lucide-react";
 import { clearAuthToken } from "@/lib/auth";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Logo } from "./logo";
+import { useBg } from "@/lib/background";
 
 const COL_COLORS = [
   "#6366f1","#8b5cf6","#ec4899","#10b981","#f59e0b",
@@ -154,6 +155,43 @@ function NavIcon3D({
         />
       )}
     </span>
+  );
+}
+
+/* ─── Avatar color from name hash ───────────────────────────── */
+function nameToColor(name: string) {
+  const palette = ["#6366f1","#8b5cf6","#ec4899","#10b981","#f59e0b","#06b6d4","#f97316","#14b8a6"];
+  let h = 0; for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+  return palette[Math.abs(h) % palette.length];
+}
+
+/* ─── Sidebar avatar row ─────────────────────────────────────── */
+function SidebarAvatarRow({ user }: { user: User }) {
+  const color = nameToColor(user.name);
+  const initials = user.name.split(" ").map((w: string) => w[0]).filter(Boolean).join("").substring(0, 2).toUpperCase();
+  return (
+    <div className="flex items-center gap-2.5 px-1 py-2 mb-1">
+      <div className="relative shrink-0" style={{ width: 32, height: 32 }}>
+        <div className="rounded-full flex items-center justify-center font-black text-white text-[11.5px] uppercase overflow-hidden relative"
+          style={{
+            width: 32, height: 32, letterSpacing: "-0.02em",
+            background: `radial-gradient(circle at 32% 28%, ${color}ee 0%, ${color}55 60%, ${color}22 100%)`,
+            border: `2px solid ${color}55`,
+            boxShadow: `0 3px 12px ${color}40, inset 0 2px 0 rgba(255,255,255,.2), inset 0 -1.5px 0 rgba(0,0,0,.18)`,
+          }}>
+          <span className="absolute inset-0 rounded-full" style={{ background: "linear-gradient(145deg, rgba(255,255,255,.25) 0%, transparent 50%)" }} />
+          <span className="relative z-10 select-none">{initials}</span>
+        </div>
+        <span className="absolute bottom-0 right-0 rounded-full border-2"
+          style={{ width: 9, height: 9, borderColor: "rgba(9,9,15,.95)", background: "#34d399", boxShadow: "0 0 6px #34d39990" }} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[12px] font-semibold text-white/80 leading-none truncate">{user.name}</p>
+        <p className="text-[11px] mt-0.5 truncate" style={{ color: `${color}99` }}>
+          {user.isGuest ? "Guest session" : user.email}
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -374,28 +412,12 @@ export function AppSidebar({ user, onOpenGemini }: AppSidebarProps) {
 
       {/* Footer */}
       <SidebarFooter className="border-t border-white/[0.06] p-3">
-        {/* Avatar */}
-        <div className="flex items-center gap-2.5 px-1 py-2 mb-1">
-          <div className="size-[28px] rounded-full relative flex items-center justify-center text-[11px] font-black text-indigo-200 uppercase shrink-0"
-            style={{
-              background: "radial-gradient(circle at 35% 30%, rgba(139,92,246,.6), rgba(99,102,241,.2))",
-              border: "1.5px solid rgba(99,102,241,.4)",
-              boxShadow: "0 2px 10px rgba(99,102,241,.3), inset 0 1.5px 0 rgba(255,255,255,.15)",
-            }}>
-            {user.name.substring(0, 2)}
-            <span className="absolute -bottom-px -right-px size-2.5 rounded-full border-2 border-[#09090f] bg-emerald-400"
-              style={{ boxShadow: "0 0 5px #34d399" }} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[12px] font-semibold text-white/80 leading-none truncate">{user.name}</p>
-            <p className="text-[11px] text-white/25 mt-0.5 truncate">{user.isGuest ? "Guest session" : user.email}</p>
-          </div>
-        </div>
+        {/* Avatar row */}
+        <SidebarAvatarRow user={user} />
 
         <SidebarMenu className="gap-0.5">
           {[
-            { href: "/ai-settings", icon: Bot,      color: "#a855f7", label: "AI Models",  anim: "breathe" as const, labelColor: "text-purple-300/75" },
-            { href: "/settings",    icon: Settings, color: "#94a3b8", label: "Settings",   anim: "spin"    as const, labelColor: "text-white/55" },
+            { href: "/settings", icon: Settings, color: "#94a3b8", label: "Settings", anim: "spin" as const, labelColor: "text-white/55" },
           ].map(({ href, icon, color, label, anim, labelColor }) => {
             const active = location === href;
             return (
@@ -422,7 +444,7 @@ export function AppSidebar({ user, onOpenGemini }: AppSidebarProps) {
                     boxShadow: "0 2px 8px rgba(239,68,68,.22), inset 0 2px 0 rgba(255,255,255,.1), inset 0 -1.5px 0 rgba(0,0,0,.18)",
                   }}>
                   <span className="absolute inset-0 rounded-[8px]" style={{ background: "linear-gradient(138deg, rgba(255,255,255,.18) 0%, transparent 48%)" }} />
-                  <LogOut className="group-hover/lo:_ni-logout"
+                  <LogOut
                     style={{ width: 12, height: 12, color: "#f87171", filter: "drop-shadow(0 1px 2px rgba(239,68,68,.55))", position: "relative", zIndex: 1 }}
                     strokeWidth={2} />
                 </span>
